@@ -1,10 +1,17 @@
 import { useEffect, useRef } from 'react'
 import { useThree, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+import { useCameraStore } from '@/state/cameraStore'
 
 
 const SPEED = 0.08
 const FRICTION = 0.85
+
+// World bounds: hub centered at origin, studio/arcade/command up to ±55 away.
+const BOUND_X_MIN = -35
+const BOUND_X_MAX = 55
+const BOUND_Z_MIN = -55
+const BOUND_Z_MAX = 55
 
 export const useCamera = () => {
   const { camera } = useThree()
@@ -13,6 +20,18 @@ export const useCamera = () => {
   const position = useRef(new THREE.Vector3(0, 1.6, 5))
   const velocity = useRef(new THREE.Vector3(0, 0, 0))
   const pointerLocked = useRef(false)
+
+  // Sync teleport requests from cameraStore (room portals + room switcher).
+  useEffect(() => {
+    const unsub = useCameraStore.subscribe((state, prev) => {
+      if (state.position === prev.position) return
+      const [x, y, z] = state.position
+      position.current.set(x, y, z)
+      camera.position.set(x, y, z)
+      velocity.current.set(0, 0, 0)
+    })
+    return unsub
+  }, [camera])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -82,10 +101,10 @@ export const useCamera = () => {
 
     position.current.add(velocity.current)
 
-    // Boundary clipping
-    position.current.x = Math.max(-19, Math.min(19, position.current.x))
+    // Boundary clipping (world covers all four rooms + hallways)
+    position.current.x = Math.max(BOUND_X_MIN, Math.min(BOUND_X_MAX, position.current.x))
     position.current.y = Math.max(0.5, Math.min(9, position.current.y))
-    position.current.z = Math.max(-19, Math.min(19, position.current.z))
+    position.current.z = Math.max(BOUND_Z_MIN, Math.min(BOUND_Z_MAX, position.current.z))
 
     camera.position.lerp(position.current, 0.1)
   })

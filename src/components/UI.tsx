@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRoomStore, RoomType } from '@/state/roomStore'
+import { useCameraStore } from '@/state/cameraStore'
 
-const ROOMS: { id: RoomType; label: string; key: string; color: string }[] = [
-  { id: 'hub',     label: 'Hub',     key: '1', color: '#00ffff' },
-  { id: 'studio',  label: 'Studio',  key: '2', color: '#ff00ff' },
-  { id: 'arcade',  label: 'Arcade',  key: '3', color: '#ffff00' },
-  { id: 'command', label: 'Command', key: '4', color: '#00ff88' },
+const ROOMS: { id: RoomType; label: string; key: string; color: string; spawn: [number, number, number] }[] = [
+  { id: 'hub',     label: 'Hub',     key: '1', color: '#00ffff', spawn: [0, 1.6, 8] },
+  { id: 'studio',  label: 'Studio',  key: '2', color: '#ff00ff', spawn: [0, 1.6, -10] },
+  { id: 'arcade',  label: 'Arcade',  key: '3', color: '#ffff00', spawn: [22, 1.6, 0] },
+  { id: 'command', label: 'Command', key: '4', color: '#00ff88', spawn: [0, 1.6, 22] },
 ]
 
 export const UI = () => {
@@ -14,6 +15,14 @@ export const UI = () => {
   const lastTimeRef = useRef(Date.now())
   const currentRoom = useRoomStore((state) => state.currentRoom)
   const setCurrentRoom = useRoomStore((state) => state.setCurrentRoom)
+  const setCameraPosition = useCameraStore((state) => state.setPosition)
+
+  const goToRoom = (id: RoomType) => {
+    const room = ROOMS.find((r) => r.id === id)
+    if (!room) return
+    setCurrentRoom(id)
+    setCameraPosition(room.spawn)
+  }
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -34,15 +43,15 @@ export const UI = () => {
     return () => clearInterval(interval)
   }, [])
 
-  // Keyboard shortcuts 1-4 to switch rooms
+  // Keyboard shortcuts 1-4 to switch rooms (teleport camera)
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       const room = ROOMS.find((r) => r.key === e.key)
-      if (room) setCurrentRoom(room.id)
+      if (room) goToRoom(room.id)
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [setCurrentRoom])
+  }, [])
 
   const activeRoom = ROOMS.find((r) => r.id === currentRoom)
 
@@ -74,7 +83,7 @@ export const UI = () => {
           return (
             <button
               key={room.id}
-              onClick={() => setCurrentRoom(room.id)}
+              onClick={() => goToRoom(room.id)}
               style={{
                 borderColor: room.color,
                 color: active ? '#0a0e27' : room.color,

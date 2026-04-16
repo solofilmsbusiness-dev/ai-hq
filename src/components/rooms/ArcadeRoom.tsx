@@ -1,9 +1,23 @@
 import * as THREE from 'three'
-import { Environment, Sparkles } from '@react-three/drei'
+import { Sparkles } from '@react-three/drei'
 import { useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { RoomPortal } from './RoomPortal'
 import { PongGame } from './PongGame'
+
+// Flickering neon point light
+const NeonFlicker = ({ position, color }: { position: [number, number, number]; color: number }) => {
+  const ref = useRef<THREE.PointLight>(null)
+  useFrame(({ clock }) => {
+    if (!ref.current) return
+    const t = clock.getElapsedTime()
+    // Quick flicker noise + occasional dropouts
+    const flicker = 0.7 + Math.sin(t * 17 + position[0]) * 0.15 + Math.sin(t * 29) * 0.1
+    const drop = Math.random() < 0.01 ? 0.3 : 1
+    ref.current.intensity = flicker * drop * 1.6
+  })
+  return <pointLight ref={ref} position={position} color={color} distance={28} decay={2} />
+}
 
 const ROOM_WIDTH = 50
 const ROOM_DEPTH = 45
@@ -160,29 +174,18 @@ export const ArcadeRoom = () => {
 
   return (
     <>
-      {/* Environment */}
-      <Environment preset="studio" />
+      {/* Arcade glow lighting — flickering neon, no ambient daylight */}
+      <ambientLight intensity={0.1} color={0x110a22} />
 
-      {/* Arcade lighting - bright with neon */}
-      <ambientLight intensity={0.4} color={0xffffff} />
-      <directionalLight
-        position={[25, 12, 20]}
-        intensity={1.2}
-        color={0xffff88}
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-camera-far={100}
-        shadow-camera-left={-50}
-        shadow-camera-right={50}
-        shadow-camera-top={45}
-        shadow-camera-bottom={-45}
-      />
+      {/* Magenta + cyan flickering neon walls */}
+      <NeonFlicker position={[-20, 8, -15]} color={0x00ffff} />
+      <NeonFlicker position={[20, 8, -15]} color={0xff00ff} />
+      <NeonFlicker position={[0, 8, 18]} color={0xffff00} />
+      <NeonFlicker position={[-18, 6, 18]} color={0xff44ff} />
+      <NeonFlicker position={[18, 6, 18]} color={0x00ffff} />
 
-      {/* Neon accent lights */}
-      <pointLight position={[-20, 8, -15]} intensity={0.8} color={0x00ffff} distance={30} />
-      <pointLight position={[20, 8, -15]} intensity={0.8} color={0xff00ff} distance={30} />
-      <pointLight position={[0, 8, 15]} intensity={0.8} color={0xffff00} distance={30} />
+      {/* Subtle directional fill so floor doesn't crush to black */}
+      <directionalLight position={[10, 12, 5]} intensity={0.25} color={0xff66cc} />
 
       {/* Floor */}
       <mesh ref={floorRef} position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>

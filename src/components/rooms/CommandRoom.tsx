@@ -1,8 +1,34 @@
 import * as THREE from 'three'
-import { Environment, Sparkles } from '@react-three/drei'
+import { Sparkles } from '@react-three/drei'
 import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { RoomPortal } from './RoomPortal'
+import { Agent } from '../Agent'
+import { LiveTaskBoard } from '../LiveTaskBoard'
+
+// Pulsing red alert lamp
+const RedAlert = ({ position }: { position: [number, number, number] }) => {
+  const lightRef = useRef<THREE.PointLight>(null)
+  const meshRef = useRef<THREE.Mesh>(null)
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime()
+    const pulse = (Math.sin(t * 3) + 1) / 2
+    if (lightRef.current) lightRef.current.intensity = 0.3 + pulse * 1.8
+    if (meshRef.current) {
+      const m = meshRef.current.material as THREE.MeshStandardMaterial
+      m.emissiveIntensity = 0.5 + pulse * 2.5
+    }
+  })
+  return (
+    <group position={position}>
+      <mesh ref={meshRef}>
+        <sphereGeometry args={[0.3, 16, 16]} />
+        <meshStandardMaterial color={0xff0033} emissive={0xff0033} emissiveIntensity={1.5} />
+      </mesh>
+      <pointLight ref={lightRef} color={0xff0033} distance={15} decay={2} />
+    </group>
+  )
+}
 
 const ROOM_WIDTH = 60
 const ROOM_DEPTH = 50
@@ -173,27 +199,32 @@ export const CommandRoom = () => {
 
   return (
     <>
-      {/* Environment */}
-      <Environment preset="studio" />
+      {/* Tactical lighting — cool blue + red alerts */}
+      <ambientLight intensity={0.08} color={0x0a1a30} />
 
-      {/* Command center lighting - tactical */}
-      <ambientLight intensity={0.25} color={0xffffff} />
-      <directionalLight
-        position={[30, 15, 25]}
-        intensity={1.4}
-        color={0xffd700}
+      {/* Cool blue overhead key */}
+      <spotLight
+        position={[0, ROOM_HEIGHT - 0.5, 0]}
+        target-position={[0, 0, 0]}
+        intensity={4.5}
+        angle={Math.PI / 2.5}
+        penumbra={0.7}
+        color={0x4488ff}
         castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-camera-far={120}
-        shadow-camera-left={-60}
-        shadow-camera-right={60}
-        shadow-camera-top={50}
-        shadow-camera-bottom={-50}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+        distance={40}
+        decay={1.5}
       />
 
-      {/* Cyan accent light */}
-      <pointLight position={[0, 10, 0]} intensity={0.8} color={0x00ffff} distance={50} />
+      {/* Cyan rim from behind task board */}
+      <pointLight position={[0, 7, -22]} intensity={3} color={0x00ffff} distance={45} decay={2} />
+
+      {/* Red alert lamps in corners */}
+      <RedAlert position={[-25, ROOM_HEIGHT - 0.6, -22]} />
+      <RedAlert position={[25, ROOM_HEIGHT - 0.6, -22]} />
+      <RedAlert position={[-25, ROOM_HEIGHT - 0.6, 22]} />
+      <RedAlert position={[25, ROOM_HEIGHT - 0.6, 22]} />
 
       {/* Floor */}
       <mesh ref={floorRef} position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
@@ -235,6 +266,9 @@ export const CommandRoom = () => {
       {/* Central task board */}
       <TaskBoard />
 
+      {/* Live agent activity feed */}
+      <LiveTaskBoard position={[0, 5, -ROOM_DEPTH / 2 + 0.5]} />
+
       {/* Agent stations - arranged in circle */}
       <AgentStation position={[-18, 0, 0]} color={0x4488ff} index={0} />
       <AgentStation position={[0, 0, -18]} color={0x8844ff} index={1} />
@@ -262,11 +296,16 @@ export const CommandRoom = () => {
         <meshStandardMaterial color={0xffd700} metalness={0.8} roughness={0.2} emissive={0xffd700} emissiveIntensity={0.25} />
       </mesh>
 
+      {/* BangOut — operations chief at command */}
+      <Agent position={[-6, 0, 8]} color={0x4488ff} name="BangOut" phase={0.5} />
+      {/* SoloBrain visiting */}
+      <Agent position={[6, 0, 8]} color={0xaa55ff} name="SoloBrain" phase={2.1} />
+
       {/* Portal back to hub */}
       <RoomPortal position={[0, 0, -22]} targetRoom="hub" color={0x00ffff} />
 
       {/* Sparkles */}
-      <Sparkles count={35} scale={[ROOM_WIDTH, ROOM_HEIGHT, ROOM_DEPTH]} size={0.8} speed={0.3} opacity={0.15} />
+      <Sparkles count={35} scale={[ROOM_WIDTH, ROOM_HEIGHT, ROOM_DEPTH]} size={0.8} speed={0.3} opacity={0.15} color="#00ffff" />
     </>
   )
 }

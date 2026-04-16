@@ -1,8 +1,9 @@
 import * as THREE from 'three'
-import { Environment, Sparkles } from '@react-three/drei'
+import { Sparkles } from '@react-three/drei'
 import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { RoomPortal } from './RoomPortal'
+import { Agent } from '../Agent'
 
 const ROOM_WIDTH = 60
 const ROOM_DEPTH = 50
@@ -139,23 +140,37 @@ export const StudioRoom = () => {
 
   return (
     <>
-      {/* Environment */}
-      <Environment preset="studio" />
+      {/* Moody film-set lighting — magenta key + cool fill */}
+      <ambientLight intensity={0.08} color={0x2a0a2a} />
 
-      {/* Dark studio lighting */}
-      <ambientLight intensity={0.2} color={0xffffff} />
-      <directionalLight
-        position={[30, 15, 20]}
-        intensity={1.3}
-        color={0xffd700}
+      {/* Magenta key spotlight aimed at editing bays */}
+      <spotLight
+        position={[-10, 11, -5]}
+        target-position={[-20, 1, 0]}
+        intensity={5}
+        angle={Math.PI / 5}
+        penumbra={0.7}
+        color={0xff44ff}
         castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-camera-far={120}
-        shadow-camera-left={-60}
-        shadow-camera-right={60}
-        shadow-camera-top={50}
-        shadow-camera-bottom={-50}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+        distance={45}
+        decay={1.6}
+      />
+
+      {/* Purple back rim from rear wall */}
+      <pointLight position={[0, 8, 22]} intensity={2.5} color={0x8844ff} distance={40} decay={2} />
+
+      {/* Cool blue fill on color grading bay */}
+      <spotLight
+        position={[15, 11, 5]}
+        target-position={[20, 1, 0]}
+        intensity={3.5}
+        angle={Math.PI / 4}
+        penumbra={0.8}
+        color={0x4488ff}
+        distance={40}
+        decay={1.8}
       />
 
       {/* Floor */}
@@ -244,11 +259,14 @@ export const StudioRoom = () => {
         ))}
       </group>
 
+      {/* Hermes — director of the studio */}
+      <Agent position={[0, 0, 5]} color={0x00ddff} name="Hermes" phase={1.2} />
+
       {/* Portal back to hub */}
       <RoomPortal position={[-28, 0, 20]} targetRoom="hub" color={0x00ffff} />
 
       {/* Sparkles */}
-      <Sparkles count={20} scale={[ROOM_WIDTH, ROOM_HEIGHT, ROOM_DEPTH]} size={0.6} speed={0.2} opacity={0.1} />
+      <Sparkles count={20} scale={[ROOM_WIDTH, ROOM_HEIGHT, ROOM_DEPTH]} size={0.6} speed={0.2} opacity={0.15} color="#ff44ff" />
     </>
   )
 }
