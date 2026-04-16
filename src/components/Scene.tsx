@@ -12,40 +12,20 @@ export const Scene = () => {
     <>
       <Canvas
         dpr={[1, window.devicePixelRatio > 2 ? 2 : window.devicePixelRatio]}
-        camera={{
-          position: [0, 1.6, 10],
-          fov: 75,
-          near: 0.1,
-          far: 1000,
-        }}
-        gl={{
-          antialias: true,
-          powerPreference: 'high-performance',
-          alpha: false,
-          precision: 'highp',
-          stencil: false,
-        }}
-        performance={{
-          current: 1, // Start at 60fps
-          min: 0.5,
-          max: 1,
-        }}
+        camera={{ position: [0, 1.6, 10], fov: 75, near: 0.1, far: 1000 }}
+        gl={{ antialias: true, powerPreference: 'high-performance', alpha: false, precision: 'highp', stencil: false }}
+        shadows
       >
         <color attach="background" args={['#0A0E27']} />
-        <fog attach="fog" args={['#0A0E27', 20, 80]} />
+        <fog attach="fog" args={['#0A0E27', 25, 90]} />
         <Suspense fallback={null}>
-          <Environment preset="city" />
+          <Environment files="/hdri/studio_small_08_1k.hdr" background={false} />
           <ConnectedHQ />
         </Suspense>
         <ColorGrading />
         <CameraController />
         <EffectComposer>
-          <Bloom
-            intensity={1.5}
-            luminanceThreshold={0.2}
-            luminanceSmoothing={0.9}
-            mipmapBlur
-          />
+          <Bloom intensity={1.8} luminanceThreshold={0.15} luminanceSmoothing={0.9} mipmapBlur />
         </EffectComposer>
       </Canvas>
       <UI />
