@@ -33,7 +33,7 @@ const EnergyOrb = () => {
         <meshStandardMaterial
           color={0x00aaff}
           emissive={0x0066cc}
-          emissiveIntensity={1.2}
+          emissiveIntensity={0.6}
           metalness={0.3}
           roughness={0.1}
           wireframe={false}
@@ -45,12 +45,11 @@ const EnergyOrb = () => {
         <meshStandardMaterial
           color={0x00ffff}
           emissive={0x00ffff}
-          emissiveIntensity={1.5}
-          toneMapped={false}
+          emissiveIntensity={0.8}
         />
       </mesh>
       {/* Glow light */}
-      <pointLight intensity={3} color={0x00aaff} distance={8} decay={2} castShadow />
+      <pointLight intensity={1.2} color={0x00aaff} distance={8} decay={2} />
     </group>
   )
 }
@@ -180,7 +179,7 @@ export const HubRoom = () => {
         <mesh key={i} position={[x, y, z] as [number,number,number]}
           rotation={[0, i < 2 ? Math.PI/2 : 0, 0]}>
           <boxGeometry args={[i < 2 ? D : W, 0.025, 0.025]} />
-          <meshStandardMaterial color={0x0066ff} emissive={0x0066ff} emissiveIntensity={2} toneMapped={false} />
+          <meshStandardMaterial color={0x0066ff} emissive={0x0066ff} emissiveIntensity={0.8} />
         </mesh>
       ))}
     </>

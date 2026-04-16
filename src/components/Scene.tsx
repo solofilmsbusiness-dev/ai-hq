@@ -12,7 +12,7 @@ export const Scene = () => {
     <>
       <Canvas
         dpr={[1, window.devicePixelRatio > 2 ? 2 : window.devicePixelRatio]}
-        camera={{ position: [0, 1.6, 10], fov: 75, near: 0.1, far: 1000 }}
+        camera={{ position: [0, 1.6, 5], fov: 70, near: 0.1, far: 500 }}
         gl={{ antialias: true, powerPreference: 'high-performance', alpha: false, precision: 'highp', stencil: false }}
         shadows
       >
@@ -25,7 +25,7 @@ export const Scene = () => {
         <ColorGrading />
         <CameraController />
         <EffectComposer>
-          <Bloom intensity={1.8} luminanceThreshold={0.15} luminanceSmoothing={0.9} mipmapBlur />
+          <Bloom intensity={0.35} luminanceThreshold={0.85} luminanceSmoothing={0.6} mipmapBlur />
         </EffectComposer>
       </Canvas>
       <UI />

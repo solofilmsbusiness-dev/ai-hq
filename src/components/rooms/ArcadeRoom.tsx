@@ -211,8 +211,7 @@ const NeonStrip = ({
       <meshStandardMaterial
         color={color}
         emissive={color}
-        emissiveIntensity={2}
-        toneMapped={false}
+        emissiveIntensity={0.9}
       />
     </mesh>
     <pointLight intensity={0.4} color={color} distance={8} decay={2} />

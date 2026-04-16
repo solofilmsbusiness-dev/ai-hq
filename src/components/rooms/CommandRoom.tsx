@@ -73,7 +73,7 @@ const AccentStrip = ({ position, length, axis = 'x', color = 0x0044ff }: {
   <group position={position}>
     <mesh rotation={axis === 'z' ? [0, Math.PI / 2, 0] : [0, 0, 0]}>
       <boxGeometry args={[length, 0.02, 0.02]} />
-      <meshStandardMaterial color={color} emissive={color} emissiveIntensity={2.5} toneMapped={false} />
+      <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.9} />
     </mesh>
     <pointLight intensity={0.3} color={color} distance={3} decay={2} />
   </group>

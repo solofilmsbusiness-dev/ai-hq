@@ -173,7 +173,7 @@ const LEDStrip = ({ start, end, color }: { start: [number, number, number]; end:
     <group position={[midX, midY, midZ]}>
       <mesh rotation={isZ ? [0, Math.PI / 2, 0] : [0, 0, 0]}>
         <boxGeometry args={isZ ? [len, 0.03, 0.03] : [len, 0.03, 0.03]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={2.5} toneMapped={false} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.9} />
       </mesh>
       <pointLight intensity={0.5} color={color} distance={3} decay={2} />
     </group>
