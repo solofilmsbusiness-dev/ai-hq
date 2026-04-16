@@ -2,30 +2,7 @@ import { Canvas } from '@react-three/fiber'
 import { CameraController } from './CameraController'
 import { UI } from './UI'
 import { ColorGrading } from './ColorGrading'
-import { HUDEnhanced } from './HUDEnhanced'
-import { TaskBoard } from './TaskBoard'
-import { useRoomStore } from '@/state/roomStore'
-import { HubRoom } from './rooms/HubRoom'
-import { StudioRoom } from './rooms/StudioRoom'
-import { ArcadeRoom } from './rooms/ArcadeRoom'
-import { CommandRoom } from './rooms/CommandRoom'
-
-const RoomRenderer = () => {
-  const currentRoom = useRoomStore((state) => state.currentRoom)
-
-  switch (currentRoom) {
-    case 'hub':
-      return <HubRoom />
-    case 'studio':
-      return <StudioRoom />
-    case 'arcade':
-      return <ArcadeRoom />
-    case 'command':
-      return <CommandRoom />
-    default:
-      return <HubRoom />
-  }
-}
+import { ConnectedHQ } from './ConnectedHQ'
 
 export const Scene = () => {
   return (
@@ -52,7 +29,8 @@ export const Scene = () => {
         }}
       >
         <color attach="background" args={['#0A0E27']} />
-        <RoomRenderer />
+        {/* Connected HQ: Single 3D world with all rooms + hallways */}
+        <ConnectedHQ />
         <ColorGrading />
         <CameraController />
       </Canvas>
