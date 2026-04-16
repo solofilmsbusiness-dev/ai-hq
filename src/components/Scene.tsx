@@ -1,8 +1,29 @@
 import { Canvas } from '@react-three/fiber'
-import { Room } from './Room'
 import { CameraController } from './CameraController'
 import { UI } from './UI'
 import { ColorGrading } from './ColorGrading'
+import { useRoomStore } from '@/state/roomStore'
+import { HubRoom } from './rooms/HubRoom'
+import { StudioRoom } from './rooms/StudioRoom'
+import { ArcadeRoom } from './rooms/ArcadeRoom'
+import { CommandRoom } from './rooms/CommandRoom'
+
+const RoomRenderer = () => {
+  const currentRoom = useRoomStore((state) => state.currentRoom)
+
+  switch (currentRoom) {
+    case 'hub':
+      return <HubRoom />
+    case 'studio':
+      return <StudioRoom />
+    case 'arcade':
+      return <ArcadeRoom />
+    case 'command':
+      return <CommandRoom />
+    default:
+      return <HubRoom />
+  }
+}
 
 export const Scene = () => {
   return (
@@ -10,7 +31,7 @@ export const Scene = () => {
       <Canvas
         dpr={[1, window.devicePixelRatio > 2 ? 2 : window.devicePixelRatio]}
         camera={{
-          position: [0, 2, 8],
+          position: [0, 1.6, 10],
           fov: 75,
           near: 0.1,
           far: 1000,
@@ -29,7 +50,7 @@ export const Scene = () => {
         }}
       >
         <color attach="background" args={['#0A0E27']} />
-        <Room />
+        <RoomRenderer />
         <ColorGrading />
         <CameraController />
       </Canvas>

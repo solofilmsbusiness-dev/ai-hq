@@ -191,6 +191,7 @@ export const Room = () => {
       <mesh
         ref={floorRef}
         position={[0, 0, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
         receiveShadow
         castShadow={false}
       >
@@ -205,7 +206,7 @@ export const Room = () => {
       </mesh>
 
       {/* Ceiling with soft glow */}
-      <mesh position={[0, ROOM_HEIGHT, 0]} receiveShadow castShadow={false}>
+      <mesh position={[0, ROOM_HEIGHT, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow castShadow={false}>
         <planeGeometry args={[ROOM_WIDTH, ROOM_DEPTH]} />
         <meshStandardMaterial
           color={0x1a1f3a}
@@ -238,7 +239,7 @@ export const Room = () => {
       </mesh>
 
       {/* Wall - Left */}
-      <mesh position={[-ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0]} receiveShadow castShadow={false}>
+      <mesh position={[-ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow castShadow={false}>
         <planeGeometry args={[ROOM_DEPTH, ROOM_HEIGHT]} />
         <meshStandardMaterial
           color={0x1a1f3a}
@@ -249,7 +250,7 @@ export const Room = () => {
       </mesh>
 
       {/* Wall - Right */}
-      <mesh position={[ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0]} receiveShadow castShadow={false}>
+      <mesh position={[ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow castShadow={false}>
         <planeGeometry args={[ROOM_DEPTH, ROOM_HEIGHT]} />
         <meshStandardMaterial
           color={0x1a1f3a}

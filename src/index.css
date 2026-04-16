@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@theme {
+  --color-hq-dark: #0A0E27;
+  --color-hq-accent: #FFD700;
+  --color-hq-wall: #1a1f3a;
+}
+
 * {
   margin: 0;
   padding: 0;
