@@ -1,134 +1,194 @@
 import * as THREE from 'three'
-import { Sparkles, Text, useGLTF } from '@react-three/drei'
-import { useRef, Suspense } from 'react'
+import { useGLTF } from '@react-three/drei'
+import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { MetalFloor, ConcreteWall } from '../RealMaterials'
 
-const ROOM_WIDTH = 30
-const ROOM_DEPTH = 30
-const ROOM_HEIGHT = 10
+// Urban hub: 14m × 14m × 4m — feels like a converted warehouse nexus
+const W = 14
+const D = 14
+const H = 4
 
-const CentralOrb = () => {
+// ─── Central energy orb ──────────────────────────────────────────────────────
+const EnergyOrb = () => {
   const orbRef = useRef<THREE.Mesh>(null)
   const ringRef = useRef<THREE.Mesh>(null)
-  useFrame((_, delta) => {
-    if (orbRef.current) { orbRef.current.rotation.x += delta * 0.3; orbRef.current.rotation.y += delta * 0.5 }
-    if (ringRef.current) { ringRef.current.rotation.z += delta * 0.4 }
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime()
+    if (orbRef.current) {
+      orbRef.current.rotation.y = t * 0.4
+      const s = 1 + Math.sin(t * 1.5) * 0.04
+      orbRef.current.scale.setScalar(s)
+    }
+    if (ringRef.current) {
+      ringRef.current.rotation.z = t * 0.6
+      ringRef.current.rotation.x = Math.sin(t * 0.3) * 0.3
+    }
   })
   return (
-    <group position={[0, 4.5, 0]}>
+    <group position={[0, 1.4, 0]}>
+      {/* Core orb */}
       <mesh ref={orbRef} castShadow>
-        <icosahedronGeometry args={[1.2, 0]} />
-        <meshStandardMaterial color={0xffd700} emissive={0xffd700} emissiveIntensity={2.2} metalness={0.95} roughness={0.1} />
+        <icosahedronGeometry args={[0.4, 2]} />
+        <meshStandardMaterial
+          color={0x00aaff}
+          emissive={0x0066cc}
+          emissiveIntensity={1.2}
+          metalness={0.3}
+          roughness={0.1}
+          wireframe={false}
+        />
       </mesh>
-      <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[2.2, 0.05, 16, 100]} />
-        <meshStandardMaterial color={0x00ccff} emissive={0x00ccff} emissiveIntensity={1.8} metalness={0.9} roughness={0.1} />
+      {/* Outer ring */}
+      <mesh ref={ringRef}>
+        <torusGeometry args={[0.65, 0.02, 8, 64]} />
+        <meshStandardMaterial
+          color={0x00ffff}
+          emissive={0x00ffff}
+          emissiveIntensity={1.5}
+          toneMapped={false}
+        />
       </mesh>
-      <pointLight position={[0, 0, 0]} intensity={2.5} color={0xffd700} distance={20} decay={2} />
+      {/* Glow light */}
+      <pointLight intensity={3} color={0x00aaff} distance={8} decay={2} castShadow />
     </group>
   )
 }
 
-const ArmChairModel = ({ position, rotation = 0 }: { position: [number, number, number], rotation?: number }) => {
-  const { scene } = useGLTF('/models/ArmChair_01/ArmChair_01_1k.gltf')
+// ─── Industrial wall lamp ─────────────────────────────────────────────────────
+const WallLamp = ({ position, rotation = [0, 0, 0] }: { position: [number, number, number]; rotation?: [number, number, number] }) => {
+  const { scene } = useGLTF('/models/industrial_wall_lamp/industrial_wall_lamp_1k.gltf')
   const clone = scene.clone()
-  clone.traverse((child) => {
-    if ((child as THREE.Mesh).isMesh) { child.castShadow = true; child.receiveShadow = true }
-  })
-  return <primitive object={clone} position={position} rotation={[0, rotation, 0]} scale={1} />
+  clone.traverse((n: any) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true } })
+  return (
+    <group position={position} rotation={rotation}>
+      <primitive object={clone} scale={[0.8, 0.8, 0.8]} />
+      <pointLight intensity={1.5} color={0xffaa44} distance={5} decay={2} />
+    </group>
+  )
 }
 
-const DeskLampModel = ({ position }: { position: [number, number, number] }) => {
-  const { scene } = useGLTF('/models/desk_lamp_arm_01/desk_lamp_arm_01_1k.gltf')
+// ─── Planter box ─────────────────────────────────────────────────────────────
+const PlanterBox = ({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) => {
+  const { scene } = useGLTF('/models/planter_box_01/planter_box_01_1k.gltf')
   const clone = scene.clone()
-  clone.traverse((child) => {
-    if ((child as THREE.Mesh).isMesh) { child.castShadow = true; child.receiveShadow = true }
-  })
-  return <primitive object={clone} position={position} scale={1.2} />
+  clone.traverse((n: any) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true } })
+  return <primitive object={clone} position={position} scale={[scale, scale, scale]} />
 }
 
-const HangingLampModel = ({ position }: { position: [number, number, number] }) => {
-  const { scene } = useGLTF('/models/hanging_industrial_lamp/hanging_industrial_lamp_1k.gltf')
+// ─── Bar stools ───────────────────────────────────────────────────────────────
+const BarStool = ({ position, rotation = [0, 0, 0] }: { position: [number, number, number]; rotation?: [number, number, number] }) => {
+  const { scene } = useGLTF('/models/bar_chair_round_01/bar_chair_round_01_1k.gltf')
   const clone = scene.clone()
-  clone.traverse((child) => {
-    if ((child as THREE.Mesh).isMesh) { child.castShadow = true; child.receiveShadow = true }
-  })
-  return <primitive object={clone} position={position} scale={1.5} />
+  clone.traverse((n: any) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true } })
+  return <primitive object={clone} position={position} rotation={rotation} scale={[0.9, 0.9, 0.9]} />
 }
 
+// ─── Modern ceiling lamp ──────────────────────────────────────────────────────
+const CeilingLamp = ({ position }: { position: [number, number, number] }) => {
+  const { scene } = useGLTF('/models/modern_ceiling_lamp_01/modern_ceiling_lamp_01_1k.gltf')
+  const clone = scene.clone()
+  clone.traverse((n: any) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true } })
+  return (
+    <group position={position}>
+      <primitive object={clone} scale={[0.9, 0.9, 0.9]} />
+      <pointLight intensity={2} color={0xfff0dd} distance={7} decay={2} castShadow />
+    </group>
+  )
+}
+
+// ─── Sofa ─────────────────────────────────────────────────────────────────────
+const Sofa = ({ position, rotation = [0, 0, 0] }: { position: [number, number, number]; rotation?: [number, number, number] }) => {
+  const { scene } = useGLTF('/models/Sofa_01/Sofa_01_1k.gltf')
+  const clone = scene.clone()
+  clone.traverse((n: any) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true } })
+  return <primitive object={clone} position={position} rotation={rotation} scale={[1.1, 1.1, 1.1]} />
+}
+
+// ─── Urban exposed pipe accent ────────────────────────────────────────────────
+const ExposedPipe = ({ position, length, axis = 'x' }: { position: [number, number, number]; length: number; axis?: string }) => (
+  <group position={position} rotation={axis === 'z' ? [0, Math.PI/2, 0] : [0, 0, 0]}>
+    <mesh castShadow>
+      <cylinderGeometry args={[0.04, 0.04, length, 8]} rotation={[0, 0, Math.PI/2] as any} />
+      <meshStandardMaterial color={0x444444} metalness={0.9} roughness={0.3} />
+    </mesh>
+  </group>
+)
+
+// ─── HubRoom ──────────────────────────────────────────────────────────────────
 export const HubRoom = () => {
   return (
     <>
-      {/* Lighting */}
-      <spotLight position={[0, 9, 0]} target-position={[0, 0, 0]} intensity={6} angle={Math.PI / 4} penumbra={0.6} color={0xffd700} castShadow shadow-mapSize={[1024, 1024]} />
-      <pointLight position={[-8, 5, -8]} intensity={3} color={0x4488ff} distance={25} decay={2} />
-      <pointLight position={[8, 5, -8]} intensity={3} color={0x8844ff} distance={25} decay={2} />
-      <pointLight position={[-8, 5, 8]} intensity={2} color={0x00ccff} distance={20} decay={2} />
-      <pointLight position={[8, 5, 8]} intensity={2} color={0xffd700} distance={20} decay={2} />
-      <ambientLight intensity={0.3} color={0x0a1040} />
+      {/* ── Lighting ── */}
+      <ambientLight intensity={0.3} color={0x223344} />
+      <directionalLight position={[3, H - 0.3, 3]} intensity={0.5} color={0xffeedd} castShadow />
 
-      {/* Real PBR floor */}
-      <Suspense fallback={
-        <mesh rotation={[-Math.PI/2,0,0]} receiveShadow>
-          <planeGeometry args={[ROOM_WIDTH, ROOM_DEPTH]} />
-          <meshStandardMaterial color="#1a1a2e" metalness={0.8} roughness={0.3} />
-        </mesh>
-      }>
-        <MetalFloor width={ROOM_WIDTH} depth={ROOM_DEPTH} position={[0, 0, 0]} repeat={8} />
-      </Suspense>
+      {/* ── Surfaces ── */}
+      <MetalFloor width={W} depth={D} position={[0, 0, 0]} repeat={5} />
 
-      {/* Real PBR walls */}
-      <Suspense fallback={null}>
-        <ConcreteWall width={ROOM_WIDTH} height={ROOM_HEIGHT} position={[0, ROOM_HEIGHT/2, -ROOM_DEPTH/2]} rotation={[0, 0, 0]} />
-        <ConcreteWall width={ROOM_WIDTH} height={ROOM_HEIGHT} position={[0, ROOM_HEIGHT/2, ROOM_DEPTH/2]} rotation={[0, Math.PI, 0]} />
-        <ConcreteWall width={ROOM_DEPTH} height={ROOM_HEIGHT} position={[-ROOM_WIDTH/2, ROOM_HEIGHT/2, 0]} rotation={[0, Math.PI/2, 0]} />
-        <ConcreteWall width={ROOM_DEPTH} height={ROOM_HEIGHT} position={[ROOM_WIDTH/2, ROOM_HEIGHT/2, 0]} rotation={[0, -Math.PI/2, 0]} />
-      </Suspense>
-
-      {/* Ceiling */}
-      <mesh position={[0, ROOM_HEIGHT, 0]} rotation={[Math.PI/2, 0, 0]}>
-        <planeGeometry args={[ROOM_WIDTH, ROOM_DEPTH]} />
-        <meshStandardMaterial color="#050810" metalness={0.9} roughness={0.2} />
+      {/* Ceiling — exposed concrete */}
+      <mesh position={[0, H, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[W, D]} />
+        <meshStandardMaterial color={0x2a2a2a} roughness={0.9} metalness={0.15} />
       </mesh>
 
-      {/* Central orb */}
-      <CentralOrb />
+      {/* ── Walls — urban concrete ── */}
+      <ConcreteWall width={W} height={H} position={[0, H/2, -D/2]} rotation={[0, 0, 0]} />
+      <ConcreteWall width={W} height={H} position={[0, H/2, D/2]} rotation={[0, Math.PI, 0]} />
+      <ConcreteWall width={D} height={H} position={[-W/2, H/2, 0]} rotation={[0, Math.PI/2, 0]} />
+      <ConcreteWall width={D} height={H} position={[W/2, H/2, 0]} rotation={[0, -Math.PI/2, 0]} />
 
-      {/* Floor glow ring */}
-      <group position={[0, 0.02, 0]} rotation={[-Math.PI/2, 0, 0]}>
-        <mesh>
-          <ringGeometry args={[3.6, 4, 64]} />
-          <meshStandardMaterial color={0xffd700} emissive={0xffd700} emissiveIntensity={1.2} metalness={0.9} roughness={0.2} />
+      {/* ── Exposed pipes along ceiling (urban industrial) ── */}
+      <ExposedPipe position={[0, H - 0.2, -D/2 + 1]} length={W - 2} axis="x" />
+      <ExposedPipe position={[-W/2 + 1, H - 0.2, 0]} length={D - 2} axis="z" />
+
+      {/* ── Wall lamps (warm industrial) ── */}
+      <WallLamp position={[-W/2 + 0.1, H - 1, -3]} rotation={[0, Math.PI/2, 0]} />
+      <WallLamp position={[-W/2 + 0.1, H - 1, 3]} rotation={[0, Math.PI/2, 0]} />
+      <WallLamp position={[W/2 - 0.1, H - 1, -3]} rotation={[0, -Math.PI/2, 0]} />
+      <WallLamp position={[W/2 - 0.1, H - 1, 3]} rotation={[0, -Math.PI/2, 0]} />
+
+      {/* ── Pendant ceiling lamps ── */}
+      <CeilingLamp position={[-3.5, H - 0.1, -3.5]} />
+      <CeilingLamp position={[3.5, H - 0.1, -3.5]} />
+      <CeilingLamp position={[-3.5, H - 0.1, 3.5]} />
+      <CeilingLamp position={[3.5, H - 0.1, 3.5]} />
+
+      {/* ── Central energy orb ── */}
+      <EnergyOrb />
+
+      {/* ── Lounge area — sofa + bar stools around orb ── */}
+      <Sofa position={[-3.5, 0, 2.5]} rotation={[0, Math.PI / 6, 0]} />
+      <Sofa position={[3.5, 0, 2.5]} rotation={[0, -Math.PI / 6, 0]} />
+      <BarStool position={[-1.5, 0, -2]} rotation={[0, 0.3, 0]} />
+      <BarStool position={[0, 0, -2.5]} rotation={[0, 0, 0]} />
+      <BarStool position={[1.5, 0, -2]} rotation={[0, -0.3, 0]} />
+
+      {/* ── Urban planters (greenery along walls) ── */}
+      <PlanterBox position={[-W/2 + 0.5, 0, -D/2 + 0.5]} scale={1.0} />
+      <PlanterBox position={[W/2 - 0.5, 0, -D/2 + 0.5]} scale={1.0} />
+      <PlanterBox position={[-W/2 + 0.5, 0, D/2 - 0.5]} scale={1.0} />
+      <PlanterBox position={[W/2 - 0.5, 0, D/2 - 0.5]} scale={1.0} />
+
+      {/* ── Blue LED accent strips at floor (urban cool) ── */}
+      {[
+        [-W/2 + 0.05, 0.03, 0],
+        [W/2 - 0.05, 0.03, 0],
+        [0, 0.03, -D/2 + 0.05],
+        [0, 0.03, D/2 - 0.05],
+      ].map(([x, y, z], i) => (
+        <mesh key={i} position={[x, y, z] as [number,number,number]}
+          rotation={[0, i < 2 ? Math.PI/2 : 0, 0]}>
+          <boxGeometry args={[i < 2 ? D : W, 0.025, 0.025]} />
+          <meshStandardMaterial color={0x0066ff} emissive={0x0066ff} emissiveIntensity={2} toneMapped={false} />
         </mesh>
-        <mesh>
-          <ringGeometry args={[6.5, 6.7, 64]} />
-          <meshStandardMaterial color={0x00ccff} emissive={0x00ccff} emissiveIntensity={0.8} metalness={0.9} roughness={0.2} />
-        </mesh>
-      </group>
-
-      {/* Real 3D furniture */}
-      <Suspense fallback={null}>
-        <ArmChairModel position={[5, 0, 5]} rotation={Math.PI * 1.25} />
-        <ArmChairModel position={[-5, 0, 5]} rotation={Math.PI * 0.75} />
-        <ArmChairModel position={[5, 0, -5]} rotation={Math.PI * 1.75} />
-        <ArmChairModel position={[-5, 0, -5]} rotation={Math.PI * 0.25} />
-        <DeskLampModel position={[-10, 0, -8]} />
-        <DeskLampModel position={[10, 0, -8]} />
-        <HangingLampModel position={[0, 9.5, 0]} />
-      </Suspense>
-
-      {/* Sparkles */}
-      <Sparkles count={40} scale={[20, 8, 20]} size={2} speed={0.3} color={0xffd700} opacity={0.6} />
-
-      {/* Room label */}
-      <Text position={[0, 8.5, -14.5]} fontSize={0.8} color="#ffd700" anchorX="center" anchorY="middle">
-        AI HQ — HUB
-      </Text>
+      ))}
     </>
   )
 }
 
-useGLTF.preload('/models/ArmChair_01/ArmChair_01_1k.gltf')
-useGLTF.preload('/models/desk_lamp_arm_01/desk_lamp_arm_01_1k.gltf')
-useGLTF.preload('/models/hanging_industrial_lamp/hanging_industrial_lamp_1k.gltf')
+useGLTF.preload('/models/industrial_wall_lamp/industrial_wall_lamp_1k.gltf')
+useGLTF.preload('/models/planter_box_01/planter_box_01_1k.gltf')
+useGLTF.preload('/models/bar_chair_round_01/bar_chair_round_01_1k.gltf')
+useGLTF.preload('/models/modern_ceiling_lamp_01/modern_ceiling_lamp_01_1k.gltf')
+useGLTF.preload('/models/Sofa_01/Sofa_01_1k.gltf')
