@@ -1,4 +1,6 @@
+import { Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
+import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { CameraController } from './CameraController'
 import { UI } from './UI'
 import { ColorGrading } from './ColorGrading'
@@ -29,10 +31,20 @@ export const Scene = () => {
         }}
       >
         <color attach="background" args={['#0A0E27']} />
-        {/* Connected HQ: Single 3D world with all rooms + hallways */}
-        <ConnectedHQ />
+        <fog attach="fog" args={['#0A0E27', 20, 80]} />
+        <Suspense fallback={null}>
+          <ConnectedHQ />
+        </Suspense>
         <ColorGrading />
         <CameraController />
+        <EffectComposer>
+          <Bloom
+            intensity={1.5}
+            luminanceThreshold={0.2}
+            luminanceSmoothing={0.9}
+            mipmapBlur
+          />
+        </EffectComposer>
       </Canvas>
       <UI />
     </>
