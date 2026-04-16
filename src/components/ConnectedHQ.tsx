@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { Suspense, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Group, Vector3 } from 'three'
 import { HubRoom } from './rooms/HubRoom'
@@ -6,7 +6,7 @@ import { StudioRoom } from './rooms/StudioRoom'
 import { ArcadeRoom } from './rooms/ArcadeRoom'
 import { CommandRoom } from './rooms/CommandRoom'
 import { Hallway } from './Hallway'
-import { useRoomStore } from '@/state/roomStore'
+import { useRoomStore, RoomType } from '@/state/roomStore'
 
 // Room center positions in world space
 const ROOM_POSITIONS = {
@@ -21,8 +21,9 @@ const RENDER_DISTANCE = 45
 
 export const ConnectedHQ = () => {
   const groupRef = useRef<Group>(null)
-  const { setCurrentRoom } = useRoomStore()
+  const setCurrentRoom = useRoomStore((s) => s.setCurrentRoom)
   const camPos = useRef(new Vector3())
+  const lastRoom = useRef<RoomType>('hub')
 
   const [visible, setVisible] = useState({
     hub: true,
@@ -30,55 +31,77 @@ export const ConnectedHQ = () => {
     arcade: false,
     command: false,
   })
+  const lastVisible = useRef(visible)
 
   useFrame(({ camera }) => {
     camPos.current.copy(camera.position)
     const pos = camPos.current
 
     // Determine current room
-    let room: 'hub' | 'studio' | 'arcade' | 'command' = 'hub'
+    let room: RoomType = 'hub'
     if (pos.z < -15) room = 'studio'
     else if (pos.x > 15) room = 'arcade'
     else if (pos.z > 15) room = 'command'
-    setCurrentRoom(room)
+    if (room !== lastRoom.current) {
+      lastRoom.current = room
+      setCurrentRoom(room)
+    }
 
-    // Cull rooms beyond render distance
-    setVisible({
+    // Cull rooms beyond render distance — only update state on change
+    const next = {
       hub:     pos.distanceTo(ROOM_POSITIONS.hub) < RENDER_DISTANCE,
       studio:  pos.distanceTo(ROOM_POSITIONS.studio) < RENDER_DISTANCE,
       arcade:  pos.distanceTo(ROOM_POSITIONS.arcade) < RENDER_DISTANCE,
       command: pos.distanceTo(ROOM_POSITIONS.command) < RENDER_DISTANCE,
-    })
+    }
+    const prev = lastVisible.current
+    if (
+      next.hub !== prev.hub ||
+      next.studio !== prev.studio ||
+      next.arcade !== prev.arcade ||
+      next.command !== prev.command
+    ) {
+      lastVisible.current = next
+      setVisible(next)
+    }
   })
 
   return (
     <group ref={groupRef}>
       {/* HUB - Center atrium */}
       {visible.hub && (
-        <group position={[0, 0, 0]}>
-          <HubRoom />
-        </group>
+        <Suspense fallback={null}>
+          <group position={[0, 0, 0]}>
+            <HubRoom />
+          </group>
+        </Suspense>
       )}
 
       {/* STUDIO - South */}
       {visible.studio && (
-        <group position={[0, 0, -30]}>
-          <StudioRoom />
-        </group>
+        <Suspense fallback={null}>
+          <group position={[0, 0, -30]}>
+            <StudioRoom />
+          </group>
+        </Suspense>
       )}
 
       {/* ARCADE - East */}
       {visible.arcade && (
-        <group position={[30, 0, 0]}>
-          <ArcadeRoom />
-        </group>
+        <Suspense fallback={null}>
+          <group position={[30, 0, 0]}>
+            <ArcadeRoom />
+          </group>
+        </Suspense>
       )}
 
       {/* COMMAND - North */}
       {visible.command && (
-        <group position={[0, 0, 30]}>
-          <CommandRoom />
-        </group>
+        <Suspense fallback={null}>
+          <group position={[0, 0, 30]}>
+            <CommandRoom />
+          </group>
+        </Suspense>
       )}
 
       {/* HALLWAYS - always visible (lightweight) */}

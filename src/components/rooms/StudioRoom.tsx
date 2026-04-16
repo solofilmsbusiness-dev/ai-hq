@@ -143,35 +143,16 @@ export const StudioRoom = () => {
       {/* Moody film-set lighting — magenta key + cool fill */}
       <ambientLight intensity={0.08} color={0x2a0a2a} />
 
-      {/* Magenta key spotlight aimed at editing bays */}
-      <spotLight
-        position={[-10, 11, -5]}
-        target-position={[-20, 1, 0]}
-        intensity={5}
-        angle={Math.PI / 5}
-        penumbra={0.7}
-        color={0xff44ff}
-        castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-        distance={45}
-        decay={1.6}
-      />
+      {/* Magenta key on editing bays (left side) */}
+      <pointLight position={[-20, 9, 0]} intensity={4} color={0xff44ff} distance={32} decay={1.7} />
+      <pointLight position={[-20, 5, -10]} intensity={1.5} color={0xff00ff} distance={20} decay={2} />
+      <pointLight position={[-20, 5, 10]} intensity={1.5} color={0xff00ff} distance={20} decay={2} />
 
-      {/* Purple back rim from rear wall */}
+      {/* Purple back rim */}
       <pointLight position={[0, 8, 22]} intensity={2.5} color={0x8844ff} distance={40} decay={2} />
 
-      {/* Cool blue fill on color grading bay */}
-      <spotLight
-        position={[15, 11, 5]}
-        target-position={[20, 1, 0]}
-        intensity={3.5}
-        angle={Math.PI / 4}
-        penumbra={0.8}
-        color={0x4488ff}
-        distance={40}
-        decay={1.8}
-      />
+      {/* Cool blue fill on color grading bay (right side) */}
+      <pointLight position={[20, 9, 0]} intensity={3} color={0x4488ff} distance={28} decay={1.8} />
 
       {/* Floor */}
       <mesh ref={floorRef} position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
