@@ -97,7 +97,6 @@ export const HubRoom = () => {
       <RoomPortal
         position={[-8, 0, 0]}
         targetRoom="studio"
-        label="Studio"
         color={0xff00ff}
       />
 
@@ -105,7 +104,6 @@ export const HubRoom = () => {
       <RoomPortal
         position={[8, 0, 0]}
         targetRoom="arcade"
-        label="Arcade"
         color={0xffff00}
       />
 
@@ -113,7 +111,6 @@ export const HubRoom = () => {
       <RoomPortal
         position={[0, 0, 6]}
         targetRoom="command"
-        label="Command"
         color={0x00ff00}
       />
 

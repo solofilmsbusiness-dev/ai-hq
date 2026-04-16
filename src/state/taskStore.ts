@@ -67,7 +67,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
             agentId: '',
             taskId: task.id,
             message: `Task created: ${task.title}`,
-          },
+          } as ActivityEvent,
         ],
       }
       return newState
@@ -118,7 +118,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
             agentId: task.agent,
             taskId: id,
             message: `${agent.name} completed: ${task.title}`,
-          },
+          } as ActivityEvent,
         ],
       }
     }),
@@ -144,7 +144,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
             type: 'agent.status_changed',
             agentId,
             message: `${agent.name} is now ${status}`,
-          },
+          } as ActivityEvent,
         ],
       }
     }),

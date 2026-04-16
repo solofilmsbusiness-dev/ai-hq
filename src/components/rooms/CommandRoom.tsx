@@ -18,7 +18,7 @@ const AgentStation = ({ position, color, index }: { position: [number, number, n
       glowRef.current.rotation.y += 0.005
     }
     if (screenRef.current) {
-      screenRef.current.material.emissiveIntensity = 0.5 + Math.sin(Date.now() * 0.003 + index) * 0.3
+      (screenRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.5 + Math.sin(Date.now() * 0.003 + index) * 0.3
     }
   })
 
@@ -132,7 +132,7 @@ const MonitorScreen = ({ position, color }: { position: [number, number, number]
 
   useFrame(() => {
     if (ref.current) {
-      ref.current.material.emissiveIntensity = 0.4 + Math.sin(Date.now() * 0.002) * 0.2
+      (ref.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.4 + Math.sin(Date.now() * 0.002) * 0.2
     }
   })
 
@@ -263,7 +263,7 @@ export const CommandRoom = () => {
       </mesh>
 
       {/* Portal back to hub */}
-      <RoomPortal position={[0, 0, -22]} targetRoom="hub" label="Hub" color={0x00ffff} />
+      <RoomPortal position={[0, 0, -22]} targetRoom="hub" color={0x00ffff} />
 
       {/* Sparkles */}
       <Sparkles count={35} scale={[ROOM_WIDTH, ROOM_HEIGHT, ROOM_DEPTH]} size={0.8} speed={0.3} opacity={0.15} />

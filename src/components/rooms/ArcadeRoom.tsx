@@ -17,7 +17,7 @@ const ArcadeCabinet = ({ position, index, onSelect }: { position: [number, numbe
 
   useFrame(() => {
     if (screenRef.current) {
-      screenRef.current.material.emissiveIntensity = hovered ? 0.9 : 0.6
+      (screenRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = hovered ? 0.9 : 0.6
     }
     if (glowRef.current) {
       glowRef.current.scale.set(
@@ -95,7 +95,7 @@ const ArcadeCabinet = ({ position, index, onSelect }: { position: [number, numbe
 }
 
 // Neon Signage
-const NeonSign = ({ position, text, color }: { position: [number, number, number]; text: string; color: number }) => {
+const NeonSign = ({ position, color }: { position: [number, number, number]; color: number }) => {
   const ref = useRef<THREE.Group>(null)
 
   useFrame(() => {
@@ -226,7 +226,7 @@ export const ArcadeRoom = () => {
       </mesh>
 
       {/* Main "ARCADE" Neon sign */}
-      <NeonSign position={[0, 9, -20]} text="ARCADE" color={0x00ffff} />
+      <NeonSign position={[0, 9, -20]} color={0x00ffff} />
 
       {/* Arcade Cabinets - two rows */}
       {/* Left column */}
@@ -261,7 +261,7 @@ export const ArcadeRoom = () => {
       <CouchSeating position={[18, 0, 18]} />
 
       {/* Portal back to hub */}
-      <RoomPortal position={[25, 0, 0]} targetRoom="hub" label="Hub" color={0x00ffff} />
+      <RoomPortal position={[25, 0, 0]} targetRoom="hub" color={0x00ffff} />
 
       {/* Sparkles with cyan/magenta tint */}
       <Sparkles count={50} scale={[ROOM_WIDTH, ROOM_HEIGHT, ROOM_DEPTH]} size={1} speed={0.4} opacity={0.2} />

@@ -1,7 +1,6 @@
 import * as THREE from 'three'
 import { useEffect, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { useGameStore } from '@/state/gameStore'
 
 interface PongGameProps {
   onClose: () => void

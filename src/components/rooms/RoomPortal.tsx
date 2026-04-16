@@ -7,7 +7,6 @@ import { useCameraStore } from '@/state/cameraStore'
 interface RoomPortalProps {
   position: [number, number, number]
   targetRoom: RoomType
-  label: string
   color: number
 }
 
@@ -26,7 +25,7 @@ const getRoomSpawnPoint = (room: RoomType): [number, number, number] => {
   }
 }
 
-export const RoomPortal = ({ position, targetRoom, label, color }: RoomPortalProps) => {
+export const RoomPortal = ({ position, targetRoom, color }: RoomPortalProps) => {
   const glowRef = useRef<THREE.Mesh>(null)
   const setCurrentRoom = useRoomStore((state) => state.setCurrentRoom)
   const setCameraPosition = useCameraStore((state) => state.setPosition)

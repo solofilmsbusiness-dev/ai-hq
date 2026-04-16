@@ -14,7 +14,7 @@ const EditingBay = ({ position, index }: { position: [number, number, number]; i
 
   useFrame(() => {
     if (screenRef.current) {
-      screenRef.current.material.emissiveIntensity = 0.6 + Math.sin(Date.now() * 0.002 + index) * 0.2
+      (screenRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.6 + Math.sin(Date.now() * 0.002 + index) * 0.2
     }
   })
 
@@ -245,7 +245,7 @@ export const StudioRoom = () => {
       </group>
 
       {/* Portal back to hub */}
-      <RoomPortal position={[-28, 0, 20]} targetRoom="hub" label="Hub" color={0x00ffff} />
+      <RoomPortal position={[-28, 0, 20]} targetRoom="hub" color={0x00ffff} />
 
       {/* Sparkles */}
       <Sparkles count={20} scale={[ROOM_WIDTH, ROOM_HEIGHT, ROOM_DEPTH]} size={0.6} speed={0.2} opacity={0.1} />
