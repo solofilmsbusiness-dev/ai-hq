@@ -16,7 +16,7 @@ const NeonFlicker = ({
 }) => {
   const ref = useRef<THREE.PointLight>(null)
   useFrame(({ clock }) => {
-    if (\!ref.current) return
+    if (!ref.current) return
     const t = clock.getElapsedTime()
     const flicker =
       0.7 + Math.sin(t * 17 + position[0]) * 0.15 + Math.sin(t * 29) * 0.1
@@ -312,7 +312,7 @@ export const ArcadeRoom = () => {
       <ArcadeCabinet position={[15, 1.5, 12]}  index={5} onSelect={() => setSelectedCabinet(5)} />
 
       {/* ── Pong Game overlay ── */}
-      {selectedCabinet \!== null && (
+      {selectedCabinet !== null && (
         <PongGame onClose={() => setSelectedCabinet(null)} />
       )}
 

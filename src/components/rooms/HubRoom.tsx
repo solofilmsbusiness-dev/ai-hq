@@ -108,8 +108,8 @@ const Sofa = ({ position, rotation = [0, 0, 0] }: { position: [number, number, n
 // ─── Urban exposed pipe accent ────────────────────────────────────────────────
 const ExposedPipe = ({ position, length, axis = 'x' }: { position: [number, number, number]; length: number; axis?: string }) => (
   <group position={position} rotation={axis === 'z' ? [0, Math.PI/2, 0] : [0, 0, 0]}>
-    <mesh castShadow>
-      <cylinderGeometry args={[0.04, 0.04, length, 8]} rotation={[0, 0, Math.PI/2] as any} />
+    <mesh castShadow rotation={[0, 0, Math.PI / 2]}>
+      <cylinderGeometry args={[0.04, 0.04, length, 8]} />
       <meshStandardMaterial color={0x444444} metalness={0.9} roughness={0.3} />
     </mesh>
   </group>

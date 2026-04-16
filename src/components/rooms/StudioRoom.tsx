@@ -14,7 +14,7 @@ const H = 3.2
 const LEDPanel = ({ position }: { position: [number, number, number] }) => {
   const ref = useRef<THREE.Mesh>(null)
   useFrame(({ clock }) => {
-    if (\!ref.current) return
+    if (!ref.current) return
     // Very subtle cool-white LED flicker (imperceptible but alive)
     const t = clock.getElapsedTime()
     ;(ref.current.material as THREE.MeshStandardMaterial).emissiveIntensity =

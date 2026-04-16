@@ -1,4 +1,3 @@
-import * as THREE from 'three'
 import { useGLTF } from '@react-three/drei'
 import { MetalFloor, ConcreteWall } from '../RealMaterials'
 import { RoomPortal } from './RoomPortal'
