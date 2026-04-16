@@ -1,154 +1,207 @@
-import { useGLTF } from '@react-three/drei'
-import { MetalFloor, ConcreteWall } from '../RealMaterials'
-import { RoomPortal } from './RoomPortal'
+import { useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
+import * as THREE from 'three'
+import { ConcreteWall } from '../RealMaterials'
 
-// Command room: 12m × 9m × 3.2m — focused ops center feel
-const W = 12
-const D = 9
-const H = 3.2
+const W = 12, D = 10, H = 3.5
 
-// ─── Models ──────────────────────────────────────────────────────────────────
-const OfficeDesk = ({ position, rotation = [0, 0, 0] }: { position: [number, number, number]; rotation?: [number, number, number] }) => {
-  const { scene } = useGLTF('/models/metal_office_desk/metal_office_desk_1k.gltf')
-  const clone = scene.clone()
-  clone.traverse((n: any) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true } })
-  return <primitive object={clone} position={position} rotation={rotation} scale={[1, 1, 1]} />
-}
+// Single monitor
+const Screen = ({
+  position, rotation, w = 0.7, h = 0.44, color = '#001a33', emissive = '#001a33'
+}: {
+  position: [number,number,number]
+  rotation?: [number,number,number]
+  w?: number, h?: number, color?: string, emissive?: string
+}) => (
+  <group position={position} rotation={rotation ?? [0,0,0]}>
+    <mesh>
+      <boxGeometry args={[w+0.04, h+0.04, 0.04]} />
+      <meshStandardMaterial color=#0a0a0a metalness={0.5} roughness={0.4} />
+    </mesh>
+    <mesh position={[0, 0, 0.025]}>
+      <planeGeometry args={[w, h]} />
+      <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.75} />
+    </mesh>
+  </group>
+)
 
-const Shelf = ({ position, rotation = [0, 0, 0] }: { position: [number, number, number]; rotation?: [number, number, number] }) => {
-  const { scene } = useGLTF('/models/steel_frame_shelves_01/steel_frame_shelves_01_1k.gltf')
-  const clone = scene.clone()
-  clone.traverse((n: any) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true } })
-  return <primitive object={clone} position={position} rotation={rotation} scale={[1, 1, 1]} />
-}
-
-const FluorescentBar = ({ position, rotation = [0, 0, 0] }: { position: [number, number, number]; rotation?: [number, number, number] }) => {
-  const { scene } = useGLTF('/models/mounted_fluorescent_lights/mounted_fluorescent_lights_1k.gltf')
-  const clone = scene.clone()
-  clone.traverse((n: any) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true } })
+// Animated scrolling data on screens
+const DataMonitor = ({ position, rotation, color }: { position: [number,number,number], rotation?: [number,number,number], color: string }) => {
+  const ref = useRef<THREE.Mesh>(null)
+  useFrame(({ clock }) => {
+    if (ref.current) {
+      (ref.current.material as THREE.MeshStandardMaterial).emissiveIntensity =
+        0.6 + Math.sin(clock.getElapsedTime() * 1.5 + position[0] * 2) * 0.15
+    }
+  })
   return (
-    <group position={position} rotation={rotation}>
-      <primitive object={clone} scale={[1.1, 1.1, 1.1]} />
-      <pointLight intensity={2.2} color={0xe8f4ff} distance={6} decay={2} />
+    <group position={position} rotation={rotation ?? [0,0,0]}>
+      <mesh>
+        <boxGeometry args={[0.76, 0.48, 0.04]} />
+        <meshStandardMaterial color=#080808 metalness={0.5} roughness={0.4} />
+      </mesh>
+      <mesh ref={ref} position={[0, 0, 0.025]}>
+        <planeGeometry args={[0.68, 0.4]} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.7} />
+      </mesh>
     </group>
   )
 }
 
-// ─── Monitor array ────────────────────────────────────────────────────────────
-const MonitorArray = ({ position, rotation = [0, 0, 0] }: { position: [number, number, number]; rotation?: [number, number, number] }) => (
-  <group position={position} rotation={rotation}>
-    {[-0.8, 0, 0.8].map((x, i) => (
-      <group key={i} position={[x, 0, 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[0.65, 0.38, 0.04]} />
-          <meshStandardMaterial color={0x111111} metalness={0.8} roughness={0.2} />
+// Monitor wall - large array behind main desk
+const MonitorWall = () => (
+  <group position={[0, 1.6, -D/2+0.1]}>
+    {/* 3x2 grid main array */}
+    {[-0.85, 0, 0.85].map((x, col) =>
+      [0.28, -0.28].map((y, row) => (
+        <DataMonitor
+          key={col*2+row}
+          position={[x, y, 0]}
+          color={[['#001a44','#002233'],['#001a00','#002200'],['#1a0033','#110022']][col][row]}
+        />
+      ))
+    )}
+    {/* Wide bottom bar screen */}
+    <Screen position={[0, -0.72, 0]} w={2.7} h={0.32} color=#000d1a emissive=#002244 />
+    {/* glow from monitors */}
+    <pointLight position={[0, 0, 0.5]} intensity={1.5} color=#0055aa distance={8} decay={2} />
+  </group>
+)
+
+// Ops desk - curved command station
+const CommandDesk = ({ position, rotY = 0 }: { position: [number,number,number], rotY?: number }) => (
+  <group position={position} rotation={[0, rotY, 0]}>
+    {/* main surface */}
+    <mesh position={[0, 0.78, 0]} castShadow receiveShadow>
+      <boxGeometry args={[2.4, 0.05, 0.85]} />
+      <meshStandardMaterial color=#0d1520 roughness={0.5} metalness={0.4} />
+    </mesh>
+    {/* raised back section */}
+    <mesh position={[0, 1.0, -0.3]} castShadow>
+      <boxGeometry args={[2.4, 0.4, 0.04]} />
+      <meshStandardMaterial color=#0a1018 roughness={0.5} metalness={0.5} />
+    </mesh>
+    {/* legs */}
+    {[[-1.1, 0.39, -0.35],[1.1, 0.39, -0.35],[-1.1, 0.39, 0.35],[1.1, 0.39, 0.35]].map(([x,y,z],i) => (
+      <mesh key={i} position={[x as number, y as number, z as number]}>
+        <cylinderGeometry args={[0.025, 0.025, 0.78, 6]} />
+        <meshStandardMaterial color=#1a2233 metalness={0.85} roughness={0.2} />
+      </mesh>
+    ))}
+    {/* desk monitors */}
+    <DataMonitor position={[-0.65, 0.88, -0.25]} color=#001a33 />
+    <DataMonitor position={[0.65, 0.88, -0.25]}  color=#001a00 />
+    {/* keyboard */}
+    <mesh position={[0, 0.8, 0.1]}>
+      <boxGeometry args={[0.42, 0.02, 0.15]} />
+      <meshStandardMaterial color=#0a0e18 metalness={0.4} roughness={0.7} />
+    </mesh>
+  </group>
+)
+
+// Server rack silhouette
+const ServerRack = ({ position }: { position: [number,number,number] }) => (
+  <group position={position}>
+    <mesh castShadow receiveShadow>
+      <boxGeometry args={[0.55, 2.0, 0.65]} />
+      <meshStandardMaterial color=#0a0f18 metalness={0.7} roughness={0.4} />
+    </mesh>
+    {/* rack units with LEDs */}
+    {[1.6, 1.35, 1.1, 0.85, 0.6, 0.35, 0.1].map((y, i) => (
+      <group key={i}>
+        <mesh position={[0, y, 0.33]}>
+          <boxGeometry args={[0.5, 0.04, 0.02]} />
+          <meshStandardMaterial color=#111827 metalness={0.5} roughness={0.6} />
         </mesh>
-        <mesh position={[0, 0, 0.022]}>
-          <boxGeometry args={[0.6, 0.34, 0.005]} />
-          <meshStandardMaterial
-            color={0x001122}
-            emissive={i === 1 ? 0x004488 : 0x002244}
-            emissiveIntensity={0.7}
-          />
+        {/* status LEDs */}
+        <mesh position={[-0.18, y, 0.34]}>
+          <sphereGeometry args={[0.012, 6, 6]} />
+          <meshStandardMaterial color=#00ff44 emissive=#00ff44 emissiveIntensity={0.9} />
         </mesh>
-        <mesh position={[0, -0.26, 0.02]} castShadow>
-          <cylinderGeometry args={[0.025, 0.04, 0.16, 8]} />
-          <meshStandardMaterial color={0x1a1a1a} metalness={0.9} roughness={0.1} />
+        <mesh position={[-0.14, y, 0.34]}>
+          <sphereGeometry args={[0.012, 6, 6]} />
+          <meshStandardMaterial color={i % 3 === 0 ? '#ff4400' : '#00aaff'} emissive={i % 3 === 0 ? '#ff4400' : '#00aaff'} emissiveIntensity={0.7} />
         </mesh>
-        <pointLight position={[0, 0, 0.15]} intensity={0.2} color={0x0055aa} distance={1.5} decay={2} />
       </group>
     ))}
-    {/* Wall mount bar */}
-    <mesh position={[0, 0.28, -0.04]}>
-      <boxGeometry args={[2.6, 0.04, 0.04]} />
-      <meshStandardMaterial color={0x333333} metalness={0.9} roughness={0.1} />
-    </mesh>
   </group>
 )
 
-// ─── LED accent strip ─────────────────────────────────────────────────────────
-const AccentStrip = ({ position, length, axis = 'x', color = 0x0044ff }: {
-  position: [number, number, number]; length: number; axis?: string; color?: number
-}) => (
-  <group position={position}>
-    <mesh rotation={axis === 'z' ? [0, Math.PI / 2, 0] : [0, 0, 0]}>
-      <boxGeometry args={[length, 0.02, 0.02]} />
-      <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.9} />
-    </mesh>
-    <pointLight intensity={0.3} color={color} distance={3} decay={2} />
-  </group>
+// Teal LED ceiling strip
+const CeilingStrip = ({ axis, pos, length }: { axis: 'x'|'z', pos: [number,number,number], length: number }) => (
+  <mesh position={pos}>
+    <boxGeometry args={axis === 'x' ? [length, 0.025, 0.04] : [0.04, 0.025, length]} />
+    <meshStandardMaterial color=#00ffcc emissive=#00ffcc emissiveIntensity={0.85} />
+  </mesh>
 )
 
-// ─── CommandRoom ─────────────────────────────────────────────────────────────
 export const CommandRoom = () => {
   return (
     <>
-      {/* ── Lighting ── */}
-      <ambientLight intensity={0.25} color={0x112233} />
-      <directionalLight position={[0, H - 0.5, 0]} intensity={0.5} color={0xe0eeff} castShadow />
+      {/* Lighting */}
+      <ambientLight intensity={0.2} color=#0a1520 />
 
-      {/* Fluorescent bars across ceiling */}
-      <FluorescentBar position={[-3, H - 0.1, -2]} rotation={[0, 0, 0]} />
-      <FluorescentBar position={[3, H - 0.1, -2]} rotation={[0, 0, 0]} />
-      <FluorescentBar position={[-3, H - 0.1, 2]} rotation={[0, 0, 0]} />
-      <FluorescentBar position={[3, H - 0.1, 2]} rotation={[0, 0, 0]} />
-
-      {/* ── Surfaces ── */}
-      <MetalFloor width={W} depth={D} position={[0, 0, 0]} repeat={4} />
-
-      {/* Ceiling */}
-      <mesh position={[0, H, 0]} rotation={[Math.PI / 2, 0, 0]}>
+      {/* Dark tech floor */}
+      <mesh position={[0, 0, 0]} rotation={[-Math.PI/2, 0, 0]} receiveShadow>
         <planeGeometry args={[W, D]} />
-        <meshStandardMaterial color={0x111118} roughness={0.95} metalness={0.1} />
+        <meshStandardMaterial color=#090d14 roughness={0.8} metalness={0.2} />
       </mesh>
-
-      {/* ── Walls ── */}
-      <ConcreteWall width={W} height={H} position={[0, H/2, -D/2]} rotation={[0, 0, 0]} />
-      <ConcreteWall width={W} height={H} position={[0, H/2, D/2]} rotation={[0, Math.PI, 0]} />
-      <ConcreteWall width={D} height={H} position={[-W/2, H/2, 0]} rotation={[0, Math.PI/2, 0]} />
-      <ConcreteWall width={D} height={H} position={[W/2, H/2, 0]} rotation={[0, -Math.PI/2, 0]} />
-
-      {/* LED accent strips — command blue */}
-      <AccentStrip position={[0, 0.04, -D/2 + 0.05]} length={W} axis="x" color={0x0055ff} />
-      <AccentStrip position={[0, 0.04, D/2 - 0.05]} length={W} axis="x" color={0x0055ff} />
-      <AccentStrip position={[-W/2 + 0.05, 0.04, 0]} length={D} axis="z" color={0x00aaff} />
-      <AccentStrip position={[W/2 - 0.05, 0.04, 0]} length={D} axis="z" color={0x00aaff} />
-      {/* Mid-wall strips */}
-      <AccentStrip position={[0, H/2, -D/2 + 0.05]} length={W} axis="x" color={0x003399} />
-      <AccentStrip position={[0, H/2, D/2 - 0.05]} length={W} axis="x" color={0x003399} />
-
-      {/* ── Main monitor wall ── */}
-      <MonitorArray position={[0, 1.6, -D/2 + 0.15]} rotation={[0, 0, 0]} />
-
-      {/* ── Desks facing the monitor wall ── */}
-      <OfficeDesk position={[-2.5, 0, -1.5]} rotation={[0, 0, 0]} />
-      <OfficeDesk position={[0, 0, -1.5]} rotation={[0, 0, 0]} />
-      <OfficeDesk position={[2.5, 0, -1.5]} rotation={[0, 0, 0]} />
-
-      {/* Monitors on desks */}
-      {[-2.5, 0, 2.5].map((x, i) => (
-        <group key={i} position={[x, 0.85, -1.7]}>
-          <mesh castShadow>
-            <boxGeometry args={[0.55, 0.33, 0.04]} />
-            <meshStandardMaterial color={0x111111} metalness={0.8} roughness={0.2} />
-          </mesh>
-          <mesh position={[0, 0, 0.022]}>
-            <boxGeometry args={[0.5, 0.3, 0.005]} />
-            <meshStandardMaterial color={0x001122} emissive={0x002255} emissiveIntensity={0.6} />
-          </mesh>
-        </group>
+      {/* floor grid lines */}
+      {[-4,-2,0,2,4].map((x,i) => (
+        <mesh key={'fx'+i} position={[x, 0.005, 0]} rotation={[-Math.PI/2, 0, 0]}>
+          <planeGeometry args={[0.02, D-0.5]} />
+          <meshStandardMaterial color=#001830 transparent opacity={0.8} />
+        </mesh>
+      ))}
+      {[-3,-1,1,3].map((z,i) => (
+        <mesh key={'fz'+i} position={[0, 0.005, z]} rotation={[-Math.PI/2, 0, 0]}>
+          <planeGeometry args={[W-0.5, 0.02]} />
+          <meshStandardMaterial color=#001830 transparent opacity={0.8} />
+        </mesh>
       ))}
 
-      {/* ── Shelving units on side wall ── */}
-      <Shelf position={[-W/2 + 0.3, 0, -2]} rotation={[0, Math.PI/2, 0]} />
-      <Shelf position={[-W/2 + 0.3, 0, 1]} rotation={[0, Math.PI/2, 0]} />
+      {/* Ceiling */}
+      <mesh position={[0, H, 0]} rotation={[-Math.PI/2, 0, 0]}>
+        <planeGeometry args={[W, D]} />
+        <meshStandardMaterial color=#080c12 roughness={0.95} />
+      </mesh>
 
-      {/* ── Portal back to hub ── */}
-      <RoomPortal position={[0, 0, -D/2 + 0.2]} targetRoom="hub" color={0x0055ff} />
+      {/* Walls */}
+      <ConcreteWall width={W} height={H} position={[0, H/2, -D/2]} rotation={[0, 0, 0]} />
+      <ConcreteWall width={W} height={H} position={[0, H/2, D/2]}  rotation={[0, Math.PI, 0]} />
+      <ConcreteWall width={D} height={H} position={[-W/2, H/2, 0]} rotation={[0, Math.PI/2, 0]} />
+      <ConcreteWall width={D} height={H} position={[W/2, H/2, 0]}  rotation={[0, -Math.PI/2, 0]} />
+
+      {/* Monitor wall at back */}
+      <MonitorWall />
+
+      {/* Command desk in front of monitors */}
+      <CommandDesk position={[0, 0, -D/2+2.5]} />
+
+      {/* Server racks on sides */}
+      <ServerRack position={[-W/2+0.45, 0, -D/2+1.2]} />
+      <ServerRack position={[-W/2+0.45, 0, -D/2+2.5]} />
+      <ServerRack position={[W/2-0.45, 0, -D/2+1.2]} />
+      <ServerRack position={[W/2-0.45, 0, -D/2+2.5]} />
+
+      {/* Secondary desk at right side */}
+      <CommandDesk position={[3.5, 0, 1.5]} rotY={-Math.PI/4} />
+
+      {/* Ceiling teal LED strips */}
+      <CeilingStrip axis=x pos={[0, H-0.02, -D/2+0.06]} length={W-0.4} />
+      <CeilingStrip axis=x pos={[0, H-0.02, D/2-0.06]}  length={W-0.4} />
+      <CeilingStrip axis=z pos={[-W/2+0.06, H-0.02, 0]} length={D-0.4} />
+      <CeilingStrip axis=z pos={[W/2-0.06, H-0.02, 0]}  length={D-0.4} />
+      {/* floor teal strips */}
+      <CeilingStrip axis=x pos={[0, 0.015, -D/2+0.06]} length={W-0.4} />
+      <CeilingStrip axis=x pos={[0, 0.015, D/2-0.06]}  length={W-0.4} />
+      <CeilingStrip axis=z pos={[-W/2+0.06, 0.015, 0]} length={D-0.4} />
+      <CeilingStrip axis=z pos={[W/2-0.06, 0.015, 0]}  length={D-0.4} />
+
+      {/* Overhead ops lighting */}
+      <pointLight position={[-2, H-0.5, 0]}  intensity={1.8} color=#00ddcc distance={9} decay={2} castShadow />
+      <pointLight position={[2,  H-0.5, 0]}  intensity={1.8} color=#00ddcc distance={9} decay={2} castShadow />
+      <pointLight position={[0,  H-0.5, -3]} intensity={1.2} color=#0077ff distance={7} decay={2} />
     </>
   )
 }
-
-useGLTF.preload('/models/metal_office_desk/metal_office_desk_1k.gltf')
-useGLTF.preload('/models/steel_frame_shelves_01/steel_frame_shelves_01_1k.gltf')
-useGLTF.preload('/models/mounted_fluorescent_lights/mounted_fluorescent_lights_1k.gltf')

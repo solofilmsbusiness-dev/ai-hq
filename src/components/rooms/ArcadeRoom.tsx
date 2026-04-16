@@ -1,340 +1,202 @@
-import * as THREE from 'three'
-import { Sparkles, useGLTF } from '@react-three/drei'
 import { useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { RoomPortal } from './RoomPortal'
+import * as THREE from 'three'
 import { PongGame } from './PongGame'
-import { MetalFloor } from '../RealMaterials'
 
-// ─── Flickering neon point light ───────────────────────────────────────────
-const NeonFlicker = ({
-  position,
-  color,
-}: {
-  position: [number, number, number]
-  color: number
-}) => {
-  const ref = useRef<THREE.PointLight>(null)
-  useFrame(({ clock }) => {
-    if (!ref.current) return
-    const t = clock.getElapsedTime()
-    const flicker =
-      0.7 + Math.sin(t * 17 + position[0]) * 0.15 + Math.sin(t * 29) * 0.1
-    const drop = Math.random() < 0.01 ? 0.3 : 1
-    ref.current.intensity = flicker * drop * 1.6
-  })
-  return (
-    <pointLight
-      ref={ref}
-      position={position}
-      color={color}
-      distance={28}
-      decay={2}
-    />
-  )
-}
+const W = 20, D = 16, H = 3.8
 
-// ─── Real Sofa Model ────────────────────────────────────────────────────────
-const SofaModel = ({
-  position,
-  rotation = [0, 0, 0],
+// Arcade cabinet
+const Cabinet = ({
+  position, rotY = 0, screenColor = '#00ff88', label = 'PLAY'
 }: {
-  position: [number, number, number]
-  rotation?: [number, number, number]
+  position: [number,number,number], rotY?: number, screenColor?: string, label?: string
 }) => {
-  const { scene } = useGLTF('/models/Sofa_01/Sofa_01_1k.gltf')
-  const clone = scene.clone()
-  clone.traverse((n: any) => {
-    if (n.isMesh) {
-      n.castShadow = true
-      n.receiveShadow = true
-    }
-  })
-  return <primitive object={clone} position={position} rotation={rotation} scale={[1.8, 1.8, 1.8]} />
-}
-
-// ─── Real Hanging Lamp ──────────────────────────────────────────────────────
-const HangingLampModel = ({
-  position,
-}: {
-  position: [number, number, number]
-}) => {
-  const { scene } = useGLTF('/models/hanging_industrial_lamp/hanging_industrial_lamp_1k.gltf')
-  const clone = scene.clone()
-  clone.traverse((n: any) => {
-    if (n.isMesh) {
-      n.castShadow = true
-      n.receiveShadow = true
-    }
-  })
-  return (
-    <group position={position}>
-      <primitive object={clone} scale={[1.2, 1.2, 1.2]} />
-      <pointLight intensity={0.8} color={0x9900ff} distance={18} decay={2} />
-    </group>
-  )
-}
-
-// ─── Arcade Cabinet ─────────────────────────────────────────────────────────
-const ArcadeCabinet = ({
-  position,
-  index,
-  onSelect,
-}: {
-  position: [number, number, number]
-  index: number
-  onSelect: () => void
-}) => {
-  const [hovered, setHovered] = useState(false)
   const screenRef = useRef<THREE.Mesh>(null)
-  const glowRef = useRef<THREE.Group>(null)
-  useFrame(() => {
+  useFrame(({ clock }) => {
     if (screenRef.current) {
-      ;(
-        screenRef.current.material as THREE.MeshStandardMaterial
-      ).emissiveIntensity = hovered ? 0.9 : 0.6
-    }
-    if (glowRef.current) {
-      glowRef.current.scale.set(
-        hovered ? 1.1 : 1,
-        hovered ? 1.1 : 1,
-        hovered ? 1.1 : 1
-      )
+      const mat = screenRef.current.material as THREE.MeshStandardMaterial
+      mat.emissiveIntensity = 0.6 + Math.sin(clock.getElapsedTime() * 2 + position[0]) * 0.15
     }
   })
   return (
-    <group ref={glowRef} position={position}>
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[1.8, 3, 0.8]} />
-        <meshStandardMaterial color={0x1a1a2a} metalness={0.4} roughness={0.6} />
+    <group position={position} rotation={[0, rotY, 0]}>
+      {/* main body */}
+      <mesh position={[0, 0.88, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.72, 1.75, 0.55]} />
+        <meshStandardMaterial color=#111111 metalness={0.5} roughness={0.6} />
       </mesh>
-      <mesh
-        position={[0, 1, 0.42]}
-        castShadow
-        ref={screenRef}
-        onClick={onSelect}
-        onPointerEnter={() => setHovered(true)}
-        onPointerLeave={() => setHovered(false)}
-      >
-        <boxGeometry args={[1.5, 1.8, 0.1]} />
-        <meshStandardMaterial
-          color={0x000033}
-          emissive={index % 2 === 0 ? 0x00ffff : 0xff00ff}
-          emissiveIntensity={0.6}
-          metalness={0.3}
-          roughness={0.3}
-        />
+      {/* screen bezel */}
+      <mesh position={[0, 1.25, 0.285]} rotation={[-0.25, 0, 0]}>
+        <boxGeometry args={[0.56, 0.44, 0.04]} />
+        <meshStandardMaterial color=#0a0a0a metalness={0.4} roughness={0.5} />
       </mesh>
-      <mesh position={[0, 1, 0.35]}>
-        <boxGeometry args={[1.7, 2, 0.08]} />
-        <meshStandardMaterial color={0x2a2a2a} metalness={0.7} roughness={0.2} />
+      {/* screen */}
+      <mesh ref={screenRef} position={[0, 1.25, 0.3]} rotation={[-0.25, 0, 0]}>
+        <planeGeometry args={[0.48, 0.36]} />
+        <meshStandardMaterial color={screenColor} emissive={screenColor} emissiveIntensity={0.7} />
       </mesh>
-      <mesh position={[0, 0.2, 0.35]} castShadow receiveShadow>
-        <boxGeometry args={[1.6, 0.6, 0.5]} />
-        <meshStandardMaterial color={0x1a1a1a} metalness={0.3} roughness={0.7} />
+      {/* marquee top */}
+      <mesh position={[0, 1.78, 0.2]} rotation={[-0.6, 0, 0]}>
+        <boxGeometry args={[0.68, 0.25, 0.06]} />
+        <meshStandardMaterial color={screenColor} emissive={screenColor} emissiveIntensity={0.5} />
       </mesh>
-      {[
-        { x: -0.5, y: 0.25, color: 0xff0000 },
-        { x: 0, y: 0.25, color: 0x00ff00 },
-        { x: 0.5, y: 0.25, color: 0x0000ff },
-        { x: -0.25, y: -0.1, color: 0xffff00 },
-        { x: 0.25, y: -0.1, color: 0xff00ff },
-      ].map((btn, i) => (
-        <mesh key={i} position={[btn.x, btn.y, 0.4]} castShadow>
-          <cylinderGeometry args={[0.12, 0.12, 0.08, 32]} />
-          <meshStandardMaterial
-            color={btn.color}
-            emissive={btn.color}
-            emissiveIntensity={0.6}
-            metalness={0.6}
-          />
+      {/* control panel */}
+      <mesh position={[0, 0.96, 0.27]} rotation={[0.5, 0, 0]}>
+        <boxGeometry args={[0.65, 0.06, 0.3]} />
+        <meshStandardMaterial color=#1a1a1a metalness={0.5} roughness={0.5} />
+      </mesh>
+      {/* joystick */}
+      <mesh position={[-0.12, 0.99, 0.26]}>
+        <cylinderGeometry args={[0.025, 0.025, 0.08, 8]} />
+        <meshStandardMaterial color=#cc0000 metalness={0.6} roughness={0.3} />
+      </mesh>
+      {/* buttons */}
+      {[0, 0.07, 0.14].map((dx, i) => (
+        <mesh key={i} position={[0.05+dx, 0.99, 0.26]}>
+          <cylinderGeometry args={[0.018, 0.018, 0.04, 8]} />
+          <meshStandardMaterial color={['#ff0055','#00aaff','#ffff00'][i]} emissive={['#ff0055','#00aaff','#ffff00'][i]} emissiveIntensity={0.5} />
         </mesh>
       ))}
-      {hovered && (
-        <pointLight
-          position={[0, 1, 0.5]}
-          intensity={0.8}
-          color={index % 2 === 0 ? 0x00ffff : 0xff00ff}
-          distance={8}
-        />
-      )}
+      {/* glow light */}
+      <pointLight position={[0, 1.4, 0.5]} intensity={0.8} color={screenColor} distance={3} decay={2} />
     </group>
   )
 }
 
-// ─── Neon Sign ───────────────────────────────────────────────────────────────
-const NeonSign = ({
-  position,
-  color,
-}: {
-  position: [number, number, number]
-  color: number
-}) => {
-  const ref = useRef<THREE.Group>(null)
-  useFrame(() => {
-    if (ref.current) {
-      ref.current.position.y += Math.sin(Date.now() * 0.005) * 0.001
-    }
-  })
+// Neon tube wall accent
+const NeonTube = ({ start, end, color }: { start: [number,number,number], end: [number,number,number], color: string }) => {
+  const s = new THREE.Vector3(...start)
+  const e = new THREE.Vector3(...end)
+  const mid = s.clone().add(e).multiplyScalar(0.5)
+  const len = s.distanceTo(e)
+  const dir = e.clone().sub(s).normalize()
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0), dir)
   return (
-    <group ref={ref} position={position}>
-      <mesh castShadow>
-        <boxGeometry args={[6, 1.5, 0.1]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={0.7}
-          metalness={0.9}
-          roughness={0.1}
-        />
-      </mesh>
-      <pointLight position={[0, 0, 0.5]} intensity={1.5} color={color} distance={20} />
-    </group>
+    <mesh position={[mid.x, mid.y, mid.z]} quaternion={q}>
+      <cylinderGeometry args={[0.02, 0.02, len, 8]} />
+      <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.95} />
+    </mesh>
   )
 }
 
-// ─── Neon wall strip ─────────────────────────────────────────────────────────
-const NeonStrip = ({
-  position,
-  rotation,
-  color,
-  length = 10,
-}: {
-  position: [number, number, number]
-  rotation: [number, number, number]
-  color: number
-  length?: number
-}) => (
-  <group position={position} rotation={rotation}>
-    <mesh>
-      <boxGeometry args={[length, 0.08, 0.08]} />
-      <meshStandardMaterial
-        color={color}
-        emissive={color}
-        emissiveIntensity={0.9}
-      />
+// Sofa
+const Sofa = ({ position, rotY = 0, color = '#1a0a2e' }: { position: [number,number,number], rotY?: number, color?: string }) => (
+  <group position={position} rotation={[0, rotY, 0]}>
+    <mesh position={[0, 0.22, 0]} castShadow receiveShadow>
+      <boxGeometry args={[2.0, 0.3, 0.85]} />
+      <meshStandardMaterial color={color} roughness={0.85} />
     </mesh>
-    <pointLight intensity={0.4} color={color} distance={8} decay={2} />
+    <mesh position={[0, 0.52, -0.38]} castShadow>
+      <boxGeometry args={[2.0, 0.5, 0.14]} />
+      <meshStandardMaterial color={color} roughness={0.85} />
+    </mesh>
+    <mesh position={[-0.94, 0.38, -0.1]}>
+      <boxGeometry args={[0.12, 0.32, 0.62]} />
+      <meshStandardMaterial color=#120820 roughness={0.85} />
+    </mesh>
+    <mesh position={[0.94, 0.38, -0.1]}>
+      <boxGeometry args={[0.12, 0.32, 0.62]} />
+      <meshStandardMaterial color=#120820 roughness={0.85} />
+    </mesh>
   </group>
 )
 
-const ROOM_WIDTH = 50
-const ROOM_DEPTH = 45
-const ROOM_HEIGHT = 12
+// Ceiling neon grid
+const CeilingGrid = () => {
+  const lines = []
+  for (let x = -W/2+2; x <= W/2-2; x += 3) {
+    lines.push(<mesh key={'x'+x} position={[x, H-0.05, 0]}>
+      <boxGeometry args={[0.02, 0.02, D-1]} />
+      <meshStandardMaterial color=#5500ff emissive=#5500ff emissiveIntensity={0.6} transparent opacity={0.8} />
+    </mesh>)
+  }
+  for (let z = -D/2+2; z <= D/2-2; z += 3) {
+    lines.push(<mesh key={'z'+z} position={[0, H-0.05, z]}>
+      <boxGeometry args={[W-1, 0.02, 0.02]} />
+      <meshStandardMaterial color=#5500ff emissive=#5500ff emissiveIntensity={0.6} transparent opacity={0.8} />
+    </mesh>)
+  }
+  return <>{lines}</>
+}
 
-// ─── ArcadeRoom ──────────────────────────────────────────────────────────────
 export const ArcadeRoom = () => {
-  const [selectedCabinet, setSelectedCabinet] = useState<number | null>(null)
-
   return (
     <>
-      {/* Arcade ambient — very dark, neon lit */}
-      <ambientLight intensity={0.08} color={0x110a22} />
+      {/* Lighting - dark with neon pops */}
+      <ambientLight intensity={0.15} color=#0a0015 />
 
-      {/* Flickering neon lights */}
-      <NeonFlicker position={[-20, 8, -15]} color={0x00ffff} />
-      <NeonFlicker position={[20, 8, -15]} color={0xff00ff} />
-      <NeonFlicker position={[0, 8, 18]} color={0xffff00} />
-      <NeonFlicker position={[-18, 6, 18]} color={0xff44ff} />
-      <NeonFlicker position={[18, 6, 18]} color={0x00ffff} />
-      <directionalLight position={[10, 12, 5]} intensity={0.2} color={0xff66cc} />
-
-      {/* ── Real PBR floor (dark tinted by arcade lighting) ── */}
-      <MetalFloor width={ROOM_WIDTH} depth={ROOM_DEPTH} position={[0, 0, 0]} repeat={8} />
-
-      {/* ── Ceiling ── */}
-      <mesh position={[0, ROOM_HEIGHT, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[ROOM_WIDTH, ROOM_DEPTH]} />
-        <meshStandardMaterial color={0x0a0a14} roughness={0.9} metalness={0.1} />
+      {/* Black floor with subtle grid */}
+      <mesh position={[0, 0, 0]} rotation={[-Math.PI/2, 0, 0]} receiveShadow>
+        <planeGeometry args={[W, D]} />
+        <meshStandardMaterial color=#070007 roughness={0.9} metalness={0.1} />
       </mesh>
 
-      {/* ── Walls — dark metal panels with neon strip accents ── */}
-      {/* Front */}
-      <mesh position={[0, ROOM_HEIGHT / 2, -ROOM_DEPTH / 2]}>
-        <planeGeometry args={[ROOM_WIDTH, ROOM_HEIGHT]} />
-        <meshStandardMaterial color={0x12121f} roughness={0.7} metalness={0.5} side={THREE.DoubleSide} />
+      {/* Ceiling - very dark */}
+      <mesh position={[0, H, 0]} rotation={[-Math.PI/2, 0, 0]}>
+        <planeGeometry args={[W, D]} />
+        <meshStandardMaterial color=#050005 roughness={0.95} />
       </mesh>
-      {/* Back */}
-      <mesh position={[0, ROOM_HEIGHT / 2, ROOM_DEPTH / 2]}>
-        <planeGeometry args={[ROOM_WIDTH, ROOM_HEIGHT]} />
-        <meshStandardMaterial color={0x12121f} roughness={0.7} metalness={0.5} side={THREE.DoubleSide} />
-      </mesh>
-      {/* Left */}
-      <mesh position={[-ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <planeGeometry args={[ROOM_DEPTH, ROOM_HEIGHT]} />
-        <meshStandardMaterial color={0x12121f} roughness={0.7} metalness={0.5} side={THREE.DoubleSide} />
-      </mesh>
-      {/* Right */}
-      <mesh position={[ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0]} rotation={[0, -Math.PI / 2, 0]}>
-        <planeGeometry args={[ROOM_DEPTH, ROOM_HEIGHT]} />
-        <meshStandardMaterial color={0x12121f} roughness={0.7} metalness={0.5} side={THREE.DoubleSide} />
-      </mesh>
+      <CeilingGrid />
 
-      {/* ── Neon strips along walls at floor and mid-height ── */}
-      <NeonStrip position={[-ROOM_WIDTH / 2 + 0.1, 0.1, 0]} rotation={[0, Math.PI / 2, 0]} color={0x00ffff} length={ROOM_DEPTH} />
-      <NeonStrip position={[ROOM_WIDTH / 2 - 0.1, 0.1, 0]} rotation={[0, Math.PI / 2, 0]} color={0xff00ff} length={ROOM_DEPTH} />
-      <NeonStrip position={[0, 0.1, -ROOM_DEPTH / 2 + 0.1]} rotation={[0, 0, 0]} color={0x9900ff} length={ROOM_WIDTH} />
-      <NeonStrip position={[0, 0.1, ROOM_DEPTH / 2 - 0.1]} rotation={[0, 0, 0]} color={0xffff00} length={ROOM_WIDTH} />
-      {/* Mid-wall strips */}
-      <NeonStrip position={[-ROOM_WIDTH / 2 + 0.1, 5, 0]} rotation={[0, Math.PI / 2, 0]} color={0xff00ff} length={ROOM_DEPTH} />
-      <NeonStrip position={[ROOM_WIDTH / 2 - 0.1, 5, 0]} rotation={[0, Math.PI / 2, 0]} color={0x00ffff} length={ROOM_DEPTH} />
-
-      {/* ── Hanging industrial lamps overhead ── */}
-      <HangingLampModel position={[-8, ROOM_HEIGHT, -8]} />
-      <HangingLampModel position={[8, ROOM_HEIGHT, -8]} />
-      <HangingLampModel position={[-8, ROOM_HEIGHT, 8]} />
-      <HangingLampModel position={[8, ROOM_HEIGHT, 8]} />
-      <HangingLampModel position={[0, ROOM_HEIGHT, 0]} />
-
-      {/* ── Main ARCADE neon sign ── */}
-      <NeonSign position={[0, 9, -ROOM_DEPTH / 2 + 1]} color={0x00ffff} />
-      {/* High score strip */}
-      <group position={[0, 7, -ROOM_DEPTH / 2 + 1]}>
-        <mesh>
-          <boxGeometry args={[10, 1.5, 0.1]} />
-          <meshStandardMaterial
-            color={0xff00ff}
-            emissive={0xff00ff}
-            emissiveIntensity={0.6}
-            metalness={0.8}
-          />
+      {/* Walls - dark with neon border */}
+      {[
+        { pos: [0, H/2, -D/2] as [number,number,number], rot: [0,0,0] as [number,number,number] },
+        { pos: [0, H/2, D/2]  as [number,number,number], rot: [0,Math.PI,0] as [number,number,number] },
+        { pos: [-W/2, H/2, 0] as [number,number,number], rot: [0,Math.PI/2,0] as [number,number,number] },
+        { pos: [W/2, H/2, 0]  as [number,number,number], rot: [0,-Math.PI/2,0] as [number,number,number] },
+      ].map((w, i) => (
+        <mesh key={i} position={w.pos} rotation={w.rot} receiveShadow>
+          <planeGeometry args={[i < 2 ? W : D, H]} />
+          <meshStandardMaterial color=#080008 roughness={0.9} />
         </mesh>
-        <pointLight position={[0, 0, 0.5]} intensity={1.2} color={0xff00ff} distance={20} />
+      ))}
+
+      {/* Neon border strips - floor */}
+      <NeonTube start={[-W/2+0.05, 0.05, -D/2+0.05]} end={[W/2-0.05, 0.05, -D/2+0.05]} color=#ff00cc />
+      <NeonTube start={[-W/2+0.05, 0.05, D/2-0.05]} end={[W/2-0.05, 0.05, D/2-0.05]} color=#ff00cc />
+      <NeonTube start={[-W/2+0.05, 0.05, -D/2+0.05]} end={[-W/2+0.05, 0.05, D/2-0.05]} color=#ff00cc />
+      <NeonTube start={[W/2-0.05, 0.05, -D/2+0.05]} end={[W/2-0.05, 0.05, D/2-0.05]} color=#ff00cc />
+
+      {/* Neon border strips - ceiling */}
+      <NeonTube start={[-W/2+0.05, H-0.05, -D/2+0.05]} end={[W/2-0.05, H-0.05, -D/2+0.05]} color=#00ccff />
+      <NeonTube start={[-W/2+0.05, H-0.05, D/2-0.05]} end={[W/2-0.05, H-0.05, D/2-0.05]} color=#00ccff />
+      <NeonTube start={[-W/2+0.05, H-0.05, -D/2+0.05]} end={[-W/2+0.05, H-0.05, D/2-0.05]} color=#00ccff />
+      <NeonTube start={[W/2-0.05, H-0.05, -D/2+0.05]} end={[W/2-0.05, H-0.05, D/2-0.05]} color=#00ccff />
+
+      {/* Neon vertical corners */}
+      <NeonTube start={[-W/2+0.05, 0.05, -D/2+0.05]} end={[-W/2+0.05, H-0.05, -D/2+0.05]} color=#aa00ff />
+      <NeonTube start={[W/2-0.05, 0.05, -D/2+0.05]}  end={[W/2-0.05, H-0.05, -D/2+0.05]}  color=#aa00ff />
+      <NeonTube start={[-W/2+0.05, 0.05, D/2-0.05]}   end={[-W/2+0.05, H-0.05, D/2-0.05]}  color=#aa00ff />
+      <NeonTube start={[W/2-0.05, 0.05, D/2-0.05]}    end={[W/2-0.05, H-0.05, D/2-0.05]}   color=#aa00ff />
+
+      {/* Wall neon accents */}
+      <NeonTube start={[-W/2+0.06, 1.0, -D/2+0.06]} end={[-W/2+0.06, 2.8, -D/2+0.06]} color=#ff00cc />
+      <NeonTube start={[W/2-0.06, 1.0, -D/2+0.06]}  end={[W/2-0.06, 2.8, -D/2+0.06]} color=#ff00cc />
+      <NeonTube start={[-W/2+0.06, 1.0, D/2-0.06]}  end={[-W/2+0.06, 2.8, D/2-0.06]} color=#00ccff />
+      <NeonTube start={[W/2-0.06, 1.0, D/2-0.06]}   end={[W/2-0.06, 2.8, D/2-0.06]}  color=#00ccff />
+
+      {/* Arcade cabinets - two rows */}
+      <Cabinet position={[-7, 0, -6.5]} rotY={0.15}  screenColor=#00ff88 />
+      <Cabinet position={[-4, 0, -6.5]} rotY={0.05}  screenColor=#ff4400 />
+      <Cabinet position={[-1, 0, -6.5]} rotY={-0.05} screenColor=#4488ff />
+      <Cabinet position={[ 2, 0, -6.5]} rotY={-0.1}  screenColor=#ffcc00 />
+      <Cabinet position={[ 5, 0, -6.5]} rotY={0.08}  screenColor=#ff00cc />
+      <Cabinet position={[ 8, 0, -6.5]} rotY={-0.08} screenColor=#00ffcc />
+
+      {/* Overhead arcade lights */}
+      <pointLight position={[-5.5, H-0.5, -5.5]} intensity={1.2} color=#ff44cc distance={8} decay={2} />
+      <pointLight position={[ 3.5, H-0.5, -5.5]} intensity={1.2} color=#4488ff distance={8} decay={2} />
+      <pointLight position={[-2,   H-0.5,  2.5]} intensity={0.8} color=#aa00ff distance={10} decay={2} />
+
+      {/* Pong game table area */}
+      <group position={[0, 0, 2.5]} scale={[0.4, 0.4, 0.4]}>
+        <PongGame onClose={() => {}} />
       </group>
 
-      {/* ── Arcade Cabinets ── */}
-      <ArcadeCabinet position={[-15, 1.5, -12]} index={0} onSelect={() => setSelectedCabinet(0)} />
-      <ArcadeCabinet position={[-15, 1.5, 0]}  index={1} onSelect={() => setSelectedCabinet(1)} />
-      <ArcadeCabinet position={[-15, 1.5, 12]} index={2} onSelect={() => setSelectedCabinet(2)} />
-      <ArcadeCabinet position={[15, 1.5, -12]}  index={3} onSelect={() => setSelectedCabinet(3)} />
-      <ArcadeCabinet position={[15, 1.5, 0]}   index={4} onSelect={() => setSelectedCabinet(4)} />
-      <ArcadeCabinet position={[15, 1.5, 12]}  index={5} onSelect={() => setSelectedCabinet(5)} />
-
-      {/* ── Pong Game overlay ── */}
-      {selectedCabinet !== null && (
-        <PongGame onClose={() => setSelectedCabinet(null)} />
-      )}
-
-      {/* ── Real Sofa seating areas ── */}
-      <SofaModel position={[-18, 0, 16]} rotation={[0, Math.PI / 4, 0]} />
-      <SofaModel position={[18, 0, 16]}  rotation={[0, -Math.PI / 4, 0]} />
-      <SofaModel position={[0, 0, 18]}   rotation={[0, Math.PI, 0]} />
-
-      {/* ── Portal back to hub ── */}
-      <RoomPortal position={[-25, 0, 0]} targetRoom="hub" color={0x00ffff} />
-
-      {/* ── Sparkles ── */}
-      <Sparkles
-        count={60}
-        scale={[ROOM_WIDTH, ROOM_HEIGHT, ROOM_DEPTH]}
-        size={1.2}
-        speed={0.3}
-        opacity={0.25}
-        color={0x9900ff}
-      />
+      {/* Sofas in lounge area */}
+      <Sofa position={[-7.5, 0, 4]} rotY={Math.PI/2} />
+      <Sofa position={[7.5, 0, 4]}  rotY={-Math.PI/2} />
+      <Sofa position={[0, 0, 6.5]}  rotY={Math.PI} />
     </>
   )
 }
-
-useGLTF.preload('/models/Sofa_01/Sofa_01_1k.gltf')
-useGLTF.preload('/models/hanging_industrial_lamp/hanging_industrial_lamp_1k.gltf')

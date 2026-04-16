@@ -1,272 +1,243 @@
-import * as THREE from 'three'
-import { useGLTF } from '@react-three/drei'
 import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { RoomPortal } from './RoomPortal'
-import { MetalFloor, ConcreteWall } from '../RealMaterials'
+import * as THREE from 'three'
+import { ConcreteWall } from '../RealMaterials'
 
-// Human-scale studio: 12m wide × 9m deep × 3.2m tall (feels like a real studio)
-const W = 12
-const D = 9
-const H = 3.2
+const W = 12, D = 10, H = 3.5
 
-// ─── LED Panel Light ─────────────────────────────────────────────────────────
-const LEDPanel = ({ position }: { position: [number, number, number] }) => {
-  const ref = useRef<THREE.Mesh>(null)
+// Ring light (studio key light) - animated slow rotation
+const RingLight = ({ position }: { position: [number,number,number] }) => {
+  const ref = useRef<THREE.Group>(null)
   useFrame(({ clock }) => {
-    if (!ref.current) return
-    // Very subtle cool-white LED flicker (imperceptible but alive)
-    const t = clock.getElapsedTime()
-    ;(ref.current.material as THREE.MeshStandardMaterial).emissiveIntensity =
-      0.95 + Math.sin(t * 120 + position[0] * 10) * 0.02
+    if (ref.current) ref.current.rotation.z = Math.sin(clock.getElapsedTime() * 0.15) * 0.05
   })
   return (
-    <group position={position}>
-      {/* Panel housing */}
-      <mesh>
-        <boxGeometry args={[1.2, 0.04, 0.6]} />
-        <meshStandardMaterial color={0x2a2a2a} metalness={0.9} roughness={0.1} />
+    <group ref={ref} position={position}>
+      {[0,1,2,3,4,5,6,7].map(i => {
+        const a = (i / 8) * Math.PI * 2
+        return (
+          <mesh key={i} position={[Math.cos(a)*0.7, Math.sin(a)*0.7, 0]}>
+            <sphereGeometry args={[0.06, 6, 6]} />
+            <meshStandardMaterial color=#ffffff emissive=#ffffee emissiveIntensity={0.95} />
+          </mesh>
+        )
+      })}
+      <mesh rotation={[0, 0, 0]}>
+        <torusGeometry args={[0.7, 0.03, 8, 48]} />
+        <meshStandardMaterial color=#cccccc metalness={0.7} roughness={0.3} />
       </mesh>
-      {/* LED emissive face */}
-      <mesh ref={ref} position={[0, -0.025, 0]}>
-        <boxGeometry args={[1.1, 0.01, 0.55]} />
-        <meshStandardMaterial
-          color={0xffffff}
-          emissive={0xddeeff}
-          emissiveIntensity={0.95}
-          toneMapped={false}
-        />
-      </mesh>
-      {/* Cool white light output */}
-      <pointLight
-        position={[0, -0.3, 0]}
-        intensity={2.5}
-        color={0xddeeff}
-        distance={6}
-        decay={2}
-        castShadow
-      />
+      {/* inner ring - smaller */}
+      {[0,1,2,3,4,5].map(i => {
+        const a = (i / 6) * Math.PI * 2
+        return (
+          <mesh key={'i'+i} position={[Math.cos(a)*0.35, Math.sin(a)*0.35, 0]}>
+            <sphereGeometry args={[0.04, 6, 6]} />
+            <meshStandardMaterial color=#ffffff emissive=#ffffee emissiveIntensity={0.9} />
+          </mesh>
+        )
+      })}
+      <pointLight intensity={4} color=#fff5ee distance={10} decay={2} castShadow />
     </group>
   )
 }
 
-// ─── Fluorescent Studio Bar Light ────────────────────────────────────────────
-const StudioBar = ({ position }: { position: [number, number, number] }) => (
-  <group position={position}>
-    <mesh>
-      <boxGeometry args={[2.4, 0.06, 0.1]} />
-      <meshStandardMaterial color={0x111111} metalness={0.8} roughness={0.2} />
+// Camera on tripod shape
+const CameraRig = ({ position, rotY = 0 }: { position: [number,number,number], rotY?: number }) => (
+  <group position={position} rotation={[0, rotY, 0]}>
+    {/* camera body */}
+    <mesh position={[0, 1.35, 0]} castShadow>
+      <boxGeometry args={[0.22, 0.16, 0.32]} />
+      <meshStandardMaterial color=#111111 metalness={0.6} roughness={0.4} />
     </mesh>
-    <mesh position={[0, -0.02, 0]}>
-      <boxGeometry args={[2.3, 0.02, 0.08]} />
-      <meshStandardMaterial
-        color={0xffffff}
-        emissive={0xe8f4ff}
-        emissiveIntensity={1.2}
-        toneMapped={false}
-      />
+    {/* lens */}
+    <mesh position={[0, 1.35, 0.22]} rotation={[Math.PI/2, 0, 0]} castShadow>
+      <cylinderGeometry args={[0.075, 0.065, 0.18, 12]} />
+      <meshStandardMaterial color=#0a0a0a metalness={0.7} roughness={0.3} />
     </mesh>
-    <pointLight position={[0, -0.5, 0]} intensity={1.8} color={0xe8f4ff} distance={5} decay={2} />
+    {/* lens glass */}
+    <mesh position={[0, 1.35, 0.32]}>
+      <circleGeometry args={[0.065, 12]} />
+      <meshStandardMaterial color=#001133 metalness={0.1} roughness={0.0} transparent opacity={0.8} />
+    </mesh>
+    {/* tripod legs */}
+    {[[-0.18, 0, 0.12],[0.18, 0, 0.12],[0, 0, -0.18]].map(([x,y,z], i) => {
+      const legEnd = new THREE.Vector3(x as number*2.5, -1.35, z as number*2.5)
+      const legStart = new THREE.Vector3(0, 0, 0)
+      const dir = legEnd.clone().sub(legStart).normalize()
+      const len = legEnd.length()
+      const mid = legEnd.clone().multiplyScalar(0.5)
+      const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0), dir)
+      return (
+        <mesh key={i} position={[mid.x, mid.y+1.35, mid.z]} quaternion={q}>
+          <cylinderGeometry args={[0.012, 0.012, len, 6]} />
+          <meshStandardMaterial color=#222222 metalness={0.8} roughness={0.2} />
+        </mesh>
+      )
+    })}
+    {/* tripod center mount */}
+    <mesh position={[0, 1.25, 0]}>
+      <cylinderGeometry args={[0.025, 0.025, 0.18, 8]} />
+      <meshStandardMaterial color=#333333 metalness={0.7} roughness={0.3} />
+    </mesh>
   </group>
 )
 
-// ─── GLTF Models ─────────────────────────────────────────────────────────────
-const FilmCamera = ({ position, rotation = [0, 0, 0] }: { position: [number, number, number]; rotation?: [number, number, number] }) => {
-  const { scene } = useGLTF('/models/Camera_01/Camera_01_1k.gltf')
-  const clone = scene.clone()
-  clone.traverse((n: any) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true } })
-  return <primitive object={clone} position={position} rotation={rotation} scale={[1.6, 1.6, 1.6]} />
-}
+// Monitor / screen
+const Monitor = ({ position, rotY = 0, color = '#001a44' }: { position: [number,number,number], rotY?: number, color?: string }) => (
+  <group position={position} rotation={[0, rotY, 0]}>
+    {/* screen bezel */}
+    <mesh position={[0, 0.32, 0]} castShadow>
+      <boxGeometry args={[0.72, 0.46, 0.04]} />
+      <meshStandardMaterial color=#0a0a0a metalness={0.5} roughness={0.4} />
+    </mesh>
+    {/* screen */}
+    <mesh position={[0, 0.32, 0.025]}>
+      <planeGeometry args={[0.64, 0.38]} />
+      <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.7} />
+    </mesh>
+    {/* stand */}
+    <mesh position={[0, 0.06, 0]}>
+      <boxGeometry args={[0.22, 0.12, 0.18]} />
+      <meshStandardMaterial color=#111111 metalness={0.6} roughness={0.4} />
+    </mesh>
+  </group>
+)
 
-const VideoCamera = ({ position, rotation = [0, 0, 0] }: { position: [number, number, number]; rotation?: [number, number, number] }) => {
-  const { scene } = useGLTF('/models/vintage_video_camera/vintage_video_camera_1k.gltf')
-  const clone = scene.clone()
-  clone.traverse((n: any) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true } })
-  return <primitive object={clone} position={position} rotation={rotation} scale={[1.4, 1.4, 1.4]} />
-}
+// Editing desk
+const Desk = ({ position, rotY = 0 }: { position: [number,number,number], rotY?: number }) => (
+  <group position={position} rotation={[0, rotY, 0]}>
+    {/* surface */}
+    <mesh position={[0, 0.75, 0]} castShadow receiveShadow>
+      <boxGeometry args={[1.8, 0.04, 0.75]} />
+      <meshStandardMaterial color=#1a1a2a roughness={0.6} metalness={0.3} />
+    </mesh>
+    {/* legs */}
+    {[[-0.82, 0.375, -0.3],[0.82, 0.375, -0.3],[-0.82, 0.375, 0.3],[0.82, 0.375, 0.3]].map(([x,y,z],i) => (
+      <mesh key={i} position={[x as number, y as number, z as number]}>
+        <cylinderGeometry args={[0.025, 0.025, 0.75, 6]} />
+        <meshStandardMaterial color=#333344 metalness={0.8} roughness={0.2} />
+      </mesh>
+    ))}
+    {/* monitors on desk */}
+    <Monitor position={[-0.35, 0.77, -0.22]} rotY={0.1} />
+    <Monitor position={[ 0.35, 0.77, -0.22]} rotY={-0.1} color=#001a00 />
+    {/* keyboard */}
+    <mesh position={[0, 0.77, 0.05]}>
+      <boxGeometry args={[0.38, 0.02, 0.14]} />
+      <meshStandardMaterial color=#111122 metalness={0.4} roughness={0.7} />
+    </mesh>
+  </group>
+)
 
-const StudioDesk = ({ position, rotation = [0, 0, 0] }: { position: [number, number, number]; rotation?: [number, number, number] }) => {
-  const { scene } = useGLTF('/models/metal_office_desk/metal_office_desk_1k.gltf')
-  const clone = scene.clone()
-  clone.traverse((n: any) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true } })
-  return <primitive object={clone} position={position} rotation={rotation} scale={[1, 1, 1]} />
-}
-
-const MountedLights = ({ position, rotation = [0, 0, 0] }: { position: [number, number, number]; rotation?: [number, number, number] }) => {
-  const { scene } = useGLTF('/models/mounted_fluorescent_lights/mounted_fluorescent_lights_1k.gltf')
-  const clone = scene.clone()
-  clone.traverse((n: any) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true } })
-  return (
-    <group position={position} rotation={rotation}>
-      <primitive object={clone} scale={[1.2, 1.2, 1.2]} />
-      <pointLight intensity={2} color={0xe8f4ff} distance={6} decay={2} />
-    </group>
-  )
-}
-
-const MetalShelves = ({ position, rotation = [0, 0, 0] }: { position: [number, number, number]; rotation?: [number, number, number] }) => {
-  const { scene } = useGLTF('/models/steel_frame_shelves_01/steel_frame_shelves_01_1k.gltf')
-  const clone = scene.clone()
-  clone.traverse((n: any) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true } })
-  return <primitive object={clone} position={position} rotation={rotation} scale={[1, 1, 1]} />
-}
-
-const Plant = ({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) => {
-  const { scene } = useGLTF('/models/potted_plant_01/potted_plant_01_1k.gltf')
-  const clone = scene.clone()
-  clone.traverse((n: any) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true } })
-  return <primitive object={clone} position={position} scale={[scale, scale, scale]} />
-}
-
-// ─── Acoustic foam panel on wall ─────────────────────────────────────────────
-const AcousticPanel = ({ position, rotation }: { position: [number, number, number]; rotation: [number, number, number] }) => (
-  <mesh position={position} rotation={rotation} castShadow receiveShadow>
-    <boxGeometry args={[0.6, 0.6, 0.08]} />
-    <meshStandardMaterial color={0x1a1a2a} roughness={0.95} metalness={0.0} />
+// Acoustic foam panel on wall
+const AcousticPanel = ({ position, rotation, w = 0.6, h = 1.2 }: { position: [number,number,number], rotation: [number,number,number], w?: number, h?: number }) => (
+  <mesh position={position} rotation={rotation} receiveShadow>
+    <boxGeometry args={[w, h, 0.06]} />
+    <meshStandardMaterial color=#1a1a28 roughness={0.95} metalness={0.0} />
   </mesh>
 )
 
-// ─── Monitor screen ───────────────────────────────────────────────────────────
-const Monitor = ({ position, rotation = [0, 0, 0] }: { position: [number, number, number]; rotation?: [number, number, number] }) => (
-  <group position={position} rotation={rotation}>
-    {/* Screen */}
-    <mesh castShadow>
-      <boxGeometry args={[0.7, 0.4, 0.04]} />
-      <meshStandardMaterial color={0x111111} metalness={0.8} roughness={0.2} />
+// Overhead LED bar light
+const LEDBar = ({ position, length = 1.2 }: { position: [number,number,number], length?: number }) => (
+  <group position={position}>
+    <mesh>
+      <boxGeometry args={[length, 0.06, 0.12]} />
+      <meshStandardMaterial color=#111111 metalness={0.6} roughness={0.4} />
     </mesh>
-    {/* Display face */}
-    <mesh position={[0, 0, 0.022]}>
-      <boxGeometry args={[0.65, 0.37, 0.005]} />
-      <meshStandardMaterial
-        color={0x001133}
-        emissive={0x0044aa}
-        emissiveIntensity={0.6}
-        metalness={0.1}
-        roughness={0.1}
-      />
+    <mesh position={[0, -0.04, 0]}>
+      <boxGeometry args={[length-0.05, 0.02, 0.09]} />
+      <meshStandardMaterial color=#eeffff emissive=#ccffff emissiveIntensity={0.9} />
     </mesh>
-    {/* Stand */}
-    <mesh position={[0, -0.28, 0]} castShadow>
-      <cylinderGeometry args={[0.03, 0.06, 0.18, 8]} />
-      <meshStandardMaterial color={0x222222} metalness={0.9} roughness={0.1} />
-    </mesh>
-    <mesh position={[0, -0.37, 0.05]}>
-      <boxGeometry args={[0.2, 0.02, 0.14]} />
-      <meshStandardMaterial color={0x222222} metalness={0.9} roughness={0.1} />
-    </mesh>
-    <pointLight position={[0, 0, 0.2]} intensity={0.3} color={0x0066ff} distance={2} decay={2} />
+    <pointLight position={[0, -0.1, 0]} intensity={1.8} color=#ddfff8 distance={6} decay={2} />
   </group>
 )
 
-// ─── LED Color strip ─────────────────────────────────────────────────────────
-const LEDStrip = ({ start, end, color }: { start: [number, number, number]; end: [number, number, number]; color: number }) => {
-  const midX = (start[0] + end[0]) / 2
-  const midY = (start[1] + end[1]) / 2
-  const midZ = (start[2] + end[2]) / 2
-  const len = Math.sqrt(
-    Math.pow(end[0] - start[0], 2) +
-    Math.pow(end[1] - start[1], 2) +
-    Math.pow(end[2] - start[2], 2)
-  )
-  const isZ = Math.abs(end[2] - start[2]) > Math.abs(end[0] - start[0])
-  return (
-    <group position={[midX, midY, midZ]}>
-      <mesh rotation={isZ ? [0, Math.PI / 2, 0] : [0, 0, 0]}>
-        <boxGeometry args={isZ ? [len, 0.03, 0.03] : [len, 0.03, 0.03]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.9} />
-      </mesh>
-      <pointLight intensity={0.5} color={color} distance={3} decay={2} />
-    </group>
-  )
-}
-
-// ─── StudioRoom ───────────────────────────────────────────────────────────────
 export const StudioRoom = () => {
   return (
     <>
-      {/* ── Lighting ── */}
-      <ambientLight intensity={0.4} color={0xffffff} />
-      <directionalLight position={[0, H - 0.5, 0]} intensity={0.6} color={0xe8f4ff} castShadow />
+      {/* Lighting */}
+      <ambientLight intensity={0.2} color=#1a1525 />
 
-      {/* LED panels in ceiling grid */}
-      <LEDPanel position={[-3, H - 0.05, -2]} />
-      <LEDPanel position={[3, H - 0.05, -2]} />
-      <LEDPanel position={[-3, H - 0.05, 2]} />
-      <LEDPanel position={[3, H - 0.05, 2]} />
-      <LEDPanel position={[0, H - 0.05, 0]} />
-
-      {/* Mounted fluorescent bars on walls */}
-      <MountedLights position={[-W / 2 + 0.1, H - 0.5, -2]} rotation={[0, Math.PI / 2, 0]} />
-      <MountedLights position={[W / 2 - 0.1, H - 0.5, 2]} rotation={[0, -Math.PI / 2, 0]} />
-
-      {/* Colored LED strips at floor level — studio accent */}
-      <LEDStrip start={[-W/2, 0.05, -D/2]} end={[W/2, 0.05, -D/2]} color={0x0088ff} />
-      <LEDStrip start={[-W/2, 0.05, D/2]} end={[W/2, 0.05, D/2]} color={0x0088ff} />
-      <LEDStrip start={[-W/2, 0.05, -D/2]} end={[-W/2, 0.05, D/2]} color={0x00ffaa} />
-      <LEDStrip start={[W/2, 0.05, -D/2]} end={[W/2, 0.05, D/2]} color={0x00ffaa} />
-
-      {/* ── Surfaces ── */}
-      <MetalFloor width={W} depth={D} position={[0, 0, 0]} repeat={4} />
-
-      {/* Ceiling */}
-      <mesh position={[0, H, 0]} rotation={[Math.PI / 2, 0, 0]}>
+      {/* Dark wood-tone floor */}
+      <mesh position={[0, 0, 0]} rotation={[-Math.PI/2, 0, 0]} receiveShadow>
         <planeGeometry args={[W, D]} />
-        <meshStandardMaterial color={0x1a1a1a} roughness={0.95} metalness={0.05} />
+        <meshStandardMaterial color=#0f0c0a roughness={0.85} metalness={0.05} />
       </mesh>
 
-      {/* ── Walls — dark acoustic treatment ── */}
+      {/* Ceiling with track rail look */}
+      <mesh position={[0, H, 0]} rotation={[-Math.PI/2, 0, 0]}>
+        <planeGeometry args={[W, D]} />
+        <meshStandardMaterial color=#141414 roughness={0.9} />
+      </mesh>
+      {/* track rails */}
+      {[-2.5, 0, 2.5].map((z, i) => (
+        <mesh key={i} position={[0, H-0.05, z]}>
+          <boxGeometry args={[W-0.5, 0.06, 0.08]} />
+          <meshStandardMaterial color=#1a1a1a metalness={0.8} roughness={0.3} />
+        </mesh>
+      ))}
+
+      {/* Walls - dark studio treatment */}
       <ConcreteWall width={W} height={H} position={[0, H/2, -D/2]} rotation={[0, 0, 0]} />
-      <ConcreteWall width={W} height={H} position={[0, H/2, D/2]} rotation={[0, Math.PI, 0]} />
+      <ConcreteWall width={W} height={H} position={[0, H/2, D/2]}  rotation={[0, Math.PI, 0]} />
       <ConcreteWall width={D} height={H} position={[-W/2, H/2, 0]} rotation={[0, Math.PI/2, 0]} />
-      <ConcreteWall width={D} height={H} position={[W/2, H/2, 0]} rotation={[0, -Math.PI/2, 0]} />
+      <ConcreteWall width={D} height={H} position={[W/2, H/2, 0]}  rotation={[0, -Math.PI/2, 0]} />
 
-      {/* Acoustic foam grid on back wall */}
-      {[-2, -1, 0, 1, 2].map(x =>
-        [1, 2].map(y => (
-          <AcousticPanel
-            key={`af-${x}-${y}`}
-            position={[x * 0.7, y * 0.75, -D/2 + 0.05]}
-            rotation={[0, 0, 0]}
-          />
-        ))
-      )}
+      {/* Acoustic panels - back wall */}
+      {[-4, -2.4, -0.8, 0.8, 2.4, 4].map((x, i) => (
+        <AcousticPanel key={i} position={[x, 1.4, -D/2+0.05]} rotation={[0, 0, 0]} />
+      ))}
+      {/* side wall panels */}
+      {[-3, 0, 3].map((z, i) => (
+        <AcousticPanel key={i} position={[-W/2+0.05, 1.4, z]} rotation={[0, Math.PI/2, 0]} w={0.9} />
+      ))}
 
-      {/* ── Studio Workstation Corner ── */}
-      <StudioDesk position={[-W/2 + 1, 0, -D/2 + 1.2]} rotation={[0, Math.PI/4, 0]} />
-      <Monitor position={[-W/2 + 1.2, 0.85, -D/2 + 1.0]} rotation={[0, Math.PI/4, 0]} />
-      <Monitor position={[-W/2 + 0.6, 0.85, -D/2 + 1.6]} rotation={[0, Math.PI/3, 0]} />
+      {/* Overhead LED bars on tracks */}
+      {[-2.5, 0, 2.5].map((z, i) => (
+        <LEDBar key={i} position={[-1.5, H-0.12, z]} length={1.4} />
+      ))}
+      {[-2.5, 0, 2.5].map((z, i) => (
+        <LEDBar key={'r'+i} position={[1.5, H-0.12, z]} length={1.4} />
+      ))}
 
-      {/* Second desk along right wall */}
-      <StudioDesk position={[W/2 - 1, 0, -D/2 + 1.2]} rotation={[0, -Math.PI/4, 0]} />
-      <Monitor position={[W/2 - 1.2, 0.85, -D/2 + 1.0]} rotation={[0, -Math.PI/4, 0]} />
+      {/* Key ring light facing shoot area */}
+      <RingLight position={[-1.5, H-0.5, 1]} />
+      <RingLight position={[ 1.5, H-0.5, 1]} />
 
-      {/* ── Film Cameras ── */}
-      <FilmCamera position={[0, 0.8, D/2 - 1.5]} rotation={[0, Math.PI, 0]} />
-      <FilmCamera position={[-2, 0.8, D/2 - 2]} rotation={[0, -Math.PI * 0.75, 0]} />
-      <VideoCamera position={[2.5, 0.8, 1]} rotation={[0, -Math.PI * 0.6, 0]} />
+      {/* Shoot area: cameras + backdrop */}
+      <CameraRig position={[-3.5, 0, 3]} rotY={Math.PI*0.85} />
+      <CameraRig position={[ 3.5, 0, 2.5]} rotY={-Math.PI*0.85} />
 
-      {/* ── Metal shelving for gear ── */}
-      <MetalShelves position={[W/2 - 0.3, 0, 1]} rotation={[0, -Math.PI/2, 0]} />
-      <MetalShelves position={[W/2 - 0.3, 0, -1.5]} rotation={[0, -Math.PI/2, 0]} />
+      {/* Backdrop - curved white/grey */}
+      <mesh position={[0, H/2, -D/2+0.3]} receiveShadow>
+        <planeGeometry args={[7, H]} />
+        <meshStandardMaterial color=#cccccc roughness={0.95} />
+      </mesh>
+      {/* Backdrop floor curve */}
+      <mesh position={[0, 0.02, -D/2+0.8]} rotation={[-Math.PI/2, 0, 0]}>
+        <planeGeometry args={[7, 1.2]} />
+        <meshStandardMaterial color=#bbbbbb roughness={0.95} />
+      </mesh>
 
-      {/* ── Plants (studio life) ── */}
-      <Plant position={[-W/2 + 0.4, 0, D/2 - 0.4]} scale={1.2} />
-      <Plant position={[W/2 - 0.4, 0, D/2 - 0.4]} scale={0.9} />
+      {/* Edit bay */}
+      <Desk position={[3.5, 0, -2.5]} rotY={Math.PI*0.9} />
 
-      {/* ── Studio bar lights overhead (key + fill) ── */}
-      <StudioBar position={[-1.5, H - 0.1, 0]} />
-      <StudioBar position={[1.5, H - 0.1, 0]} />
-      <StudioBar position={[0, H - 0.1, -2]} />
+      {/* Orange accent strip - ceiling edge */}
+      <mesh position={[0, H-0.02, -D/2+0.05]}>
+        <boxGeometry args={[W-0.4, 0.02, 0.04]} />
+        <meshStandardMaterial color=#ff6600 emissive=#ff4400 emissiveIntensity={0.7} />
+      </mesh>
+      <mesh position={[-W/2+0.05, H-0.02, 0]}>
+        <boxGeometry args={[0.04, 0.02, D-0.4]} />
+        <meshStandardMaterial color=#ff6600 emissive=#ff4400 emissiveIntensity={0.7} />
+      </mesh>
+      <mesh position={[W/2-0.05, H-0.02, 0]}>
+        <boxGeometry args={[0.04, 0.02, D-0.4]} />
+        <meshStandardMaterial color=#ff6600 emissive=#ff4400 emissiveIntensity={0.7} />
+      </mesh>
 
-      {/* ── Portal back to hub ── */}
-      <RoomPortal position={[0, 0, D/2 - 0.2]} targetRoom="hub" color={0x00ccff} />
+      {/* warm fill */}
+      <pointLight position={[0, 2.5, 0]} intensity={0.5} color=#ffcc88 distance={12} decay={2} />
     </>
   )
 }
-
-useGLTF.preload('/models/Camera_01/Camera_01_1k.gltf')
-useGLTF.preload('/models/vintage_video_camera/vintage_video_camera_1k.gltf')
-useGLTF.preload('/models/metal_office_desk/metal_office_desk_1k.gltf')
-useGLTF.preload('/models/mounted_fluorescent_lights/mounted_fluorescent_lights_1k.gltf')
-useGLTF.preload('/models/steel_frame_shelves_01/steel_frame_shelves_01_1k.gltf')
-useGLTF.preload('/models/potted_plant_01/potted_plant_01_1k.gltf')
